@@ -4,20 +4,30 @@ This C library provides a conveniently usable `buffer_t` type for managing a `ch
 
 The library was developed efficiently, but without a focus on speed, the focus is a lock-free implementation and the effective handling of parallel and concurrent tasks. As a result, it is highly versatile and suitable for use across a wide range of platforms, from embedded systems to high-performance computers.
 
-<img
-  src="./readme_misc/overview.svg"
-  alt="triangle with all three sides equal"
-  width="220" />
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="./readme_misc/overview_dark.svg" />
+  <img
+    alt="Type of buffer"
+    src="./readme_misc/overview.svg"
+    width="220" />
+</picture>
 
 - Thread/interrupt-Safe & Lock-Free:
 Supports parallel and concurrent execution through two dedicated tasks - one reader and one writer - without the use of semaphores or memory fences.
 - Atomic operations:
 Synchronization is achieved exclusively through modern, atomic operations - for maximum efficiency and portability. `_Atomic(T)` in C and `std::atomic<T>` in C++.
 
-<img
-  src="./readme_misc/thread.svg"
-  alt="triangle with all three sides equal"
-  width="180" />
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="./readme_misc/thread_dark.svg" />
+  <img
+    alt="Different types of tasks"
+    src="./readme_misc/thread.svg"
+    width="180" />
+</picture>
 
 ## Field of Application
 
