@@ -7,10 +7,10 @@ The library was developed efficiently, but without a focus on speed, the focus i
 <picture>
   <source
     media="(prefers-color-scheme: dark)"
-    srcset="./readme_misc/overview_dark.svg" />
+    srcset="./docs/overview_dark.svg" />
   <img
     alt="Type of buffer"
-    src="./readme_misc/overview.svg"
+    src="./docs/overview.svg"
     width="220" />
 </picture>
 
@@ -22,10 +22,10 @@ Synchronization is achieved exclusively through modern, atomic operations - for 
 <picture>
   <source
     media="(prefers-color-scheme: dark)"
-    srcset="./readme_misc/thread_dark.svg" />
+    srcset="./docs/thread_dark.svg" />
   <img
     alt="Different types of tasks"
-    src="./readme_misc/thread.svg"
+    src="./docs/thread.svg"
     width="180" />
 </picture>
 
