@@ -66,8 +66,7 @@ void example_1(void)
 
 void example_2(void)
 {
-    char buf[10];
-    buffer_t * p = buffer.ObjectAllocate(buf, sizeof(buf), true);
+    buffer_t * p = buffer.ObjectAllocate(NULL, 10, true);
     if(NULL != p)
     {
         p->new_line = example_handler;
