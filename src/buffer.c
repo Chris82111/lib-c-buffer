@@ -91,7 +91,7 @@ bool buffer_clear(buffer_t * object)
             atomic_fetch_sub(&object->lines, lines);
 
 #ifdef BUFFER_ENABLE_HANDLER
-            if(object->empty) { object->empty(object); }
+            if(object->on_empty) { object->on_empty(object); }
 #endif
 
             cleared = true;
@@ -125,15 +125,15 @@ void buffer_copy(const buffer_t * object, buffer_t * dest)
     BUFFER_COPY_FIELD(object, dest, last);
     BUFFER_COPY_FIELD(object, dest, end_of_line_character);
 #ifdef BUFFER_ENABLE_HANDLER
-    BUFFER_COPY_FIELD(object, dest, start);
-    BUFFER_COPY_FIELD(object, dest, stop);
-    BUFFER_COPY_FIELD(object, dest, full);
-    BUFFER_COPY_FIELD(object, dest, empty);
-    BUFFER_COPY_FIELD(object, dest, new_character);
-    BUFFER_COPY_FIELD(object, dest, new_line);
-    BUFFER_COPY_FIELD(object, dest, error);
-    BUFFER_COPY_FIELD(object, dest, wait_set);
-    BUFFER_COPY_FIELD(object, dest, wait_get);
+    BUFFER_COPY_FIELD(object, dest, on_start);
+    BUFFER_COPY_FIELD(object, dest, on_stop);
+    BUFFER_COPY_FIELD(object, dest, on_full);
+    BUFFER_COPY_FIELD(object, dest, on_empty);
+    BUFFER_COPY_FIELD(object, dest, on_new_character);
+    BUFFER_COPY_FIELD(object, dest, on_new_line);
+    BUFFER_COPY_FIELD(object, dest, on_error);
+    BUFFER_COPY_FIELD(object, dest, on_wait_set);
+    BUFFER_COPY_FIELD(object, dest, on_wait_get);
 #endif
     BUFFER_COPY_FIELD(object, dest, consumer_ptr);
     BUFFER_COPY_ATOMIC(object, dest, producer_ptr);
@@ -170,15 +170,15 @@ bool buffer_equal(const buffer_t * object, const buffer_t * object2)
         BUFFER_COMPARE_FIELD(object, object2, last) &&
         BUFFER_COMPARE_FIELD(object, object2, end_of_line_character) &&
 #ifdef BUFFER_ENABLE_HANDLER
-        BUFFER_COMPARE_FIELD(object, object2, start) &&
-        BUFFER_COMPARE_FIELD(object, object2, stop) &&
-        BUFFER_COMPARE_FIELD(object, object2, full) &&
-        BUFFER_COMPARE_FIELD(object, object2, empty) &&
-        BUFFER_COMPARE_FIELD(object, object2, new_character) &&
-        BUFFER_COMPARE_FIELD(object, object2, new_line) &&
-        BUFFER_COMPARE_FIELD(object, object2, error) &&
-        BUFFER_COMPARE_FIELD(object, object2, wait_set) &&
-        BUFFER_COMPARE_FIELD(object, object2, wait_get) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_start) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_stop) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_full) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_empty) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_new_character) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_new_line) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_error) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_wait_set) &&
+        BUFFER_COMPARE_FIELD(object, object2, on_wait_get) &&
 #endif
         BUFFER_COMPARE_FIELD(object, object2, consumer_ptr) &&
         BUFFER_COMPARE_ATOMIC(object, object2, producer_ptr) &&
@@ -212,9 +212,9 @@ char buffer_get(buffer_t * object)
                 }
 
 #ifdef BUFFER_ENABLE_HANDLER
-                if(object->wait_get)
+                if(object->on_wait_get)
                 {
-                    if(object->wait_get(object))
+                    if(object->on_wait_get(object))
                     {
                         // Function was canceled by the handler function
                         atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
@@ -252,7 +252,7 @@ char buffer_get(buffer_t * object)
             {
 
 #ifdef BUFFER_ENABLE_HANDLER
-                if(object->error) { object->error(object); }
+                if(object->on_error) { object->on_error(object); }
 #endif
 
                 // Internal error, the function is canceled
@@ -269,7 +269,7 @@ char buffer_get(buffer_t * object)
             object->consumer_ptr = object->data;
 
 #ifdef BUFFER_ENABLE_HANDLER
-            if(object->empty) { object->empty(object); }
+            if(object->on_empty) { object->on_empty(object); }
 #endif
         }
     }
@@ -311,14 +311,14 @@ char buffer_get_available_or_null(buffer_t * object)
                     object->consumer_ptr = object->data;
 
 #ifdef BUFFER_ENABLE_HANDLER
-                    if(object->empty) { object->empty(object); }
+                    if(object->on_empty) { object->on_empty(object); }
 #endif
                 }
             }
             else
             {
 #ifdef BUFFER_ENABLE_HANDLER
-                if(object->error) { object->error(object); }
+                if(object->on_error) { object->on_error(object); }
 #endif
             }
         }
@@ -349,15 +349,15 @@ bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start)
     object->end_of_line_character = '\n';
 
 #ifdef BUFFER_ENABLE_HANDLER
-    object->start = NULL;
-    object->stop = NULL;
-    object->full = NULL;
-    object->empty = NULL;
-    object->new_character = NULL;
-    object->new_line = NULL;
-    object->error = NULL;
-    object->wait_set = NULL;
-    object->wait_get = NULL;
+    object->on_start = NULL;
+    object->on_stop = NULL;
+    object->on_full = NULL;
+    object->on_empty = NULL;
+    object->on_new_character = NULL;
+    object->on_new_line = NULL;
+    object->on_error = NULL;
+    object->on_wait_set = NULL;
+    object->on_wait_get = NULL;
 #endif
 
     object->consumer_ptr = data;
@@ -488,7 +488,12 @@ size_t buffer_read(buffer_t * object, char * dest, size_t n)
 
 size_t buffer_read_line(buffer_t * object, char * dest, size_t n)
 {
-    if((NULL == object) || (NULL == dest)) { return 0; }
+    if((NULL == object) ||
+       (0 == atomic_load(&object->lines)) ||
+       (NULL == dest))
+    {
+        return 0;
+    }
 
     --n;
     char c;
@@ -566,15 +571,15 @@ bool buffer_reset(buffer_t * object, bool start)
     object->end_of_line_character = '\n';
 
 #ifdef BUFFER_ENABLE_HANDLER
-    object->start = NULL;
-    object->stop = NULL;
-    object->full = NULL;
-    object->empty = NULL;
-    object->new_character = NULL;
-    object->new_line = NULL;
-    object->error = NULL;
-    object->wait_set = NULL;
-    object->wait_get = NULL;
+    object->on_start = NULL;
+    object->on_stop = NULL;
+    object->on_full = NULL;
+    object->on_empty = NULL;
+    object->on_new_character = NULL;
+    object->on_new_line = NULL;
+    object->on_error = NULL;
+    object->on_wait_set = NULL;
+    object->on_wait_get = NULL;
 #endif
 
     object->consumer_ptr = object->data;
@@ -615,11 +620,11 @@ bool buffer_set(buffer_t * object, char c)
                 atomic_fetch_add(&object->length, 1);
 
 #ifdef BUFFER_ENABLE_HANDLER
-                if(object->new_character) { object->new_character(object, c); }
+                if(object->on_new_character) { object->on_new_character(object, c); }
 
                 if(object->end_of_line_character == c)
                 {
-                    if(object->new_line) { object->new_line(object); }
+                    if(object->on_new_line) { object->on_new_line(object); }
                 }
 #endif
 
@@ -628,11 +633,11 @@ bool buffer_set(buffer_t * object, char c)
             else
             {
 #ifdef BUFFER_ENABLE_HANDLER
-                if(object->full) { object->full(object, c); }
+                if(object->on_full) { object->on_full(object, c); }
 
-                if(object->wait_set)
+                if(object->on_wait_set)
                 {
-                    if(object->wait_set(object))
+                    if(object->on_wait_set(object))
                     {
                         break; // Function was canceled by the handler function
                     }
@@ -677,11 +682,11 @@ bool buffer_set_possible_or_skip(buffer_t * object, char c)
 
 #ifdef BUFFER_ENABLE_HANDLER
 
-            if(object->new_character) { object->new_character(object, c); }
+            if(object->on_new_character) { object->on_new_character(object, c); }
 
             if(object->end_of_line_character == c)
             {
-                if(object->new_line) { object->new_line(object); }
+                if(object->on_new_line) { object->on_new_line(object); }
             }
 #endif
 
@@ -690,7 +695,7 @@ bool buffer_set_possible_or_skip(buffer_t * object, char c)
         else
         {
 #ifdef BUFFER_ENABLE_HANDLER
-            if(object->full) { object->full(object, c); }
+            if(object->on_full) { object->on_full(object, c); }
 #endif
         }
     }
@@ -723,7 +728,7 @@ bool buffer_start(buffer_t * object)
         atomic_fetch_or(&object->state, BUFFER_FLAGS_IDLE);
 
 #ifdef BUFFER_ENABLE_HANDLER
-        if(object->start) { object->start(object); }
+        if(object->on_start) { object->on_start(object); }
 #endif
 
         return true;
@@ -740,7 +745,7 @@ bool buffer_stop_force(buffer_t * object)
     if(BUFFER_FLAGS_STOP == state)
     {
 #ifdef BUFFER_ENABLE_HANDLER
-        if(object->stop) { object->stop(object); }
+        if(object->on_stop) { object->on_stop(object); }
 #endif
 
         return true;
@@ -757,7 +762,7 @@ bool buffer_stop_try(buffer_t * object)
     if(BUFFER_FLAGS_STOP == state)
     {
 #ifdef BUFFER_ENABLE_HANDLER
-        if(object->stop) { object->stop(object); }
+        if(object->on_stop) { object->on_stop(object); }
 #endif
 
         return true;
@@ -767,7 +772,7 @@ bool buffer_stop_try(buffer_t * object)
         if (atomic_compare_exchange_strong(&(object->state), (_Atomic(unsigned char) *)&state, BUFFER_FLAGS_STOP))
         {
 #ifdef BUFFER_ENABLE_HANDLER
-            if(object->stop) { object->stop(object); }
+            if(object->on_stop) { object->on_stop(object); }
 #endif
 
             return true;

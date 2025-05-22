@@ -263,11 +263,11 @@ typedef enum buffer_flags_e
 //! @brief Handler type of `buffer_s`
 //!
 //! @details Used in the functions handler:
-//! - ::buffer_s::empty
-//! - ::buffer_s::new_line
-//! - ::buffer_s::error
-//! - ::buffer_s::start
-//! - ::buffer_s::stop
+//! - ::buffer_s::on_empty
+//! - ::buffer_s::on_new_line
+//! - ::buffer_s::on_error
+//! - ::buffer_s::on_start
+//! - ::buffer_s::on_stop
 //!
 //! @param[in,out] object The buffer object
 typedef void (*buffer_action_handler_t)(buffer_t * object);
@@ -275,8 +275,8 @@ typedef void (*buffer_action_handler_t)(buffer_t * object);
 //! @brief Handler type of `buffer_s`
 //!
 //! @details Used in the functions handler:
-//! - buffer_s::full
-//! - buffer_s::new_character
+//! - buffer_s::on_full
+//! - buffer_s::on_new_character
 //!
 //! @param[in,out] object The buffer object
 //! @param c The character in focus
@@ -285,8 +285,8 @@ typedef void (*buffer_action_char_handler_t)(buffer_t * object, char c);
 //! @brief Handler type of `buffer_s`
 //!
 //! @details Used in the functions handler:
-//! - buffer_s::wait_set
-//! - buffer_s::wait_get
+//! - buffer_s::on_wait_set
+//! - buffer_s::on_wait_get
 //!
 //! @param[in,out] object The buffer object
 //! @return Freely usable return value
@@ -323,40 +323,40 @@ struct buffer_s {
 
     //! @brief Start handler
     //! @details Handler that is called when the object is started, ::buffer_start().
-    buffer_action_handler_t start;
+    buffer_action_handler_t on_start;
 
     //! @brief Stop handler
     //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
-    buffer_action_handler_t stop;
+    buffer_action_handler_t on_stop;
 
     //! @brief Full handler
     //! @details Handler that is called when you want to save a character but the buffer is full.
     //! - The character that is NOT to be saved is passed
     //! - Called from producer/set thread.
-    buffer_action_char_handler_t full;
+    buffer_action_char_handler_t on_full;
 
     //! @brief Empty handler
     //! @details Handler that is called when the buffer was reset.
     //! - Called from consumer/get thread.
-    buffer_action_handler_t empty;
+    buffer_action_handler_t on_empty;
 
     //! @brief New Character handler
     //! @details Handler that is called when a new character was save in the buffer.
     //! - The character that is to be saved is passed
     //! - Called from producer/set thread.
-    buffer_action_char_handler_t new_character;
+    buffer_action_char_handler_t on_new_character;
 
     //! @brief New Line handler
     //! @details Handler that is called when a new newline character was save in the buffer.
     //! - Called from producer/set thread.
-    buffer_action_handler_t new_line;
+    buffer_action_handler_t on_new_line;
 
     //! @brief Error handler
     //! @details Handler that is called when a character is to be read because there are new characters,
     //! but the read address is above the last element. This is an error that occurs due to
     //! external manipulation.
     //! - Called from consumer/get thread.
-    buffer_action_handler_t error;
+    buffer_action_handler_t on_error;
 
     //! @brief Set wait handler
     //! @details Handler that is called in each cycle when you use ::buffer_set()
@@ -364,7 +364,7 @@ struct buffer_s {
     //! - Any value other than 0 causes the wait loop to be exited
     //! - Called from producer/set thread.
     //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t wait_set;
+    buffer_function_char_handler_t on_wait_set;
 
     //! @brief Get wait handler
     //! @details Handler that is called in each cycle when you use ::buffer_get()
@@ -372,7 +372,7 @@ struct buffer_s {
     //! - Any value other than 0 causes the wait loop to be exited
     //! - Called from consumer/get thread.
     //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t wait_get;
+    buffer_function_char_handler_t on_wait_get;
 
 #endif
 

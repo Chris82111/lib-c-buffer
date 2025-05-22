@@ -85,17 +85,10 @@ This is an example of how the code can be used on an embedded system.
 char uart_buf[10];
 buffer_t uart = BUFFER_INIT(
     uart_buf, sizeof(uart_buf), false);
-bool uart_ready = false;
-
-void example_3_handler()
-{
-    uart_ready = true;
-}
 
 void example_3_init(void)
 {
     buffer.Start(&uart);
-    uart.new_line = example_3_handler;
     uart.end_of_line_character = '\r';
 }
 
@@ -108,15 +101,16 @@ void example_3_receive(void)
 
 void example_3_main_loop(void)
 {
-    // One of the two conditions is sufficient
-    if(uart_ready && buffer.Lines(&uart))
+    char input[10];
+    
+    // while(1) {
+    
+    if(buffer.ReadLine(&uart, input, sizeof(input)))
     {
-        char input[10];
-        uart_ready = false;
-        buffer.ReadLine(&uart, input, sizeof(input));
-
         printf("Out: %s\n", input);
         fflush(stdout);
     }
+    
+    // }
 }
 ```
