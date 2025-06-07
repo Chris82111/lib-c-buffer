@@ -9,6 +9,7 @@
 //! All atomic operations must be performed atomically.
 //! For more information see: @ref buffer_s
 
+
 #ifndef INC_BUFFER_H_
 #define INC_BUFFER_H_
 
@@ -139,11 +140,11 @@ extern "C" {
 
 //! @defgroup buffer_disable_handler Additional option to save storage space
 //!
-//! @details All handlers can be deactivated by setting the BUFFER_DISABLE_HANDLER define.
+//! @details All handlers can be deactivated by setting the ::BUFFER_DISABLE_HANDLER define.
 //!
 //! - The define must be set for all files, otherwise not enough space is reserved during
 //!   use and problems occur when calling.
-//! - The `BUFFER_ENABLE_HANDLER` define can be set, but is the default option.
+//! - The ::BUFFER_ENABLE_HANDLER define can be set, but is the default option.
 //! - If both definitions are set, the handlers can be used, so the standard behavior wins.
 //!
 //! @{
@@ -151,7 +152,10 @@ extern "C" {
 #ifndef BUFFER_DISABLE_HANDLER
 
   #ifndef BUFFER_ENABLE_HANDLER
+
+    //! @brief See: \ref buffer_disable_handler
     #define BUFFER_ENABLE_HANDLER
+
   #endif
 
 #endif
@@ -260,7 +264,7 @@ typedef enum buffer_flags_e
 
 #ifdef BUFFER_ENABLE_HANDLER
 
-//! @brief Handler type of `buffer_s`
+//! @brief Handler type of ::buffer_s
 //!
 //! @details Used in the functions handler:
 //! - ::buffer_s::on_empty
@@ -308,67 +312,88 @@ typedef char (*buffer_function_char_handler_t)(buffer_t * object);
 struct buffer_s {
 
     //! @brief Buffer start address
+    //!
     //! @details Start address of the `char` array which stores the data
     char * data;
 
     //! @brief Buffer last address
+    //!
     //! @details Last address of the `char` array
     char * last;
 
     //! @brief End-Of-Line character
+    //!
     //! @details End of line character, standard is '\\n'
     char end_of_line_character;
 
 #ifdef BUFFER_ENABLE_HANDLER
 
     //! @brief Start handler
+    //!
     //! @details Handler that is called when the object is started, ::buffer_start().
+    //! - `NULL` is allowed.
     buffer_action_handler_t on_start;
 
     //! @brief Stop handler
+    //!
     //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
+    //! - `NULL` is allowed.
     buffer_action_handler_t on_stop;
 
     //! @brief Full handler
+    //!
     //! @details Handler that is called when you want to save a character but the buffer is full.
+    //! - `NULL` is allowed.
     //! - The character that is NOT to be saved is passed
     //! - Called from producer/set thread.
     buffer_action_char_handler_t on_full;
 
     //! @brief Empty handler
+    //!
     //! @details Handler that is called when the buffer was reset.
+    //! - `NULL` is allowed.
     //! - Called from consumer/get thread.
     buffer_action_handler_t on_empty;
 
     //! @brief New Character handler
+    //!
     //! @details Handler that is called when a new character was save in the buffer.
+    //! - `NULL` is allowed.
     //! - The character that is to be saved is passed
     //! - Called from producer/set thread.
     buffer_action_char_handler_t on_new_character;
 
     //! @brief New Line handler
+    //!
     //! @details Handler that is called when a new newline character was save in the buffer.
+    //! - `NULL` is allowed.
     //! - Called from producer/set thread.
     buffer_action_handler_t on_new_line;
 
     //! @brief Error handler
+    //!
     //! @details Handler that is called when a character is to be read because there are new characters,
     //! but the read address is above the last element. This is an error that occurs due to
     //! external manipulation.
+    //! - `NULL` is allowed.
     //! - Called from consumer/get thread.
     buffer_action_handler_t on_error;
 
     //! @brief Set wait handler
+    //!
     //! @details Handler that is called in each cycle when you use ::buffer_set()
     //! while no space or no character is available.
+    //! - `NULL` is allowed.
     //! - Any value other than 0 causes the wait loop to be exited
     //! - Called from producer/set thread.
     //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
     buffer_function_char_handler_t on_wait_set;
 
     //! @brief Get wait handler
+    //!
     //! @details Handler that is called in each cycle when you use ::buffer_get()
     //! while no space or no character is available.
+    //! - `NULL` is allowed.
     //! - Any value other than 0 causes the wait loop to be exited
     //! - Called from consumer/get thread.
     //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
@@ -377,6 +402,7 @@ struct buffer_s {
 #endif
 
     //! @brief Consumer pointer
+    //!
     //! @details Pointer to the next position of the buffer to be read from.
     //! - From the consumer thread, the pointer can be used directly.
     //! - Note that the pointer is not null ('\\0') terminated.
@@ -384,30 +410,37 @@ struct buffer_s {
     char * consumer_ptr;
 
     //! @brief Producer pointer
+    //!
     //! @details Pointer to the next position of the buffer to be written to.
     //! - Use ::atomic_load() if you need to use the element directly.
     volatile _Atomic(char *) producer_ptr;
 
     //! @brief Number of characters is buffer
+    //!
     //! @details Current number of characters stored in the buffer.
     //! - Use ::atomic_load() if you need to use the element directly.
     volatile _Atomic(size_t) length;
 
     //! @brief Number of newline characters
+    //!
     //! @details Current number of newline character stored in the buffer.
     //! - Use ::atomic_load() if you need to use the element directly.
     volatile _Atomic(size_t) lines;
 
     //! @brief Contains the buffer state
+    //!
     //! @details Provides information about which functions are currently
     //! being executed. The `enum` ::buffer_flags_e type provides
     //! more information about the individual bits.
     //! - Use ::atomic_load() if you need to use the element directly.
     volatile _Atomic(unsigned char) state;
 
+    //! @brief Optional pointer to user data, `NULL` is allowed
+    void * user_data;
 };
 
 //! @brief Represents a simplified form of a class
+//!
 //! @details The global variable ::buffer can be used to easily access all matching
 //! functions with auto-completion.
 struct buffer_sc
@@ -445,6 +478,7 @@ struct buffer_sc
  *---------------------------------------------------------------------*/
 
 //! @brief To access all member functions working with type ::buffer_s
+//!
 //! @details Allows a simplified class to easily access all member functions
 //! working with type ::buffer_s. The auto-completion function helps you to select all
 //! suitable functions via ::buffer_sc struct.
@@ -854,20 +888,21 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
-    /* .start                 = */ NULL, \
-    /* .stop                  = */ NULL, \
-    /* .full                  = */ NULL, \
-    /* .empty                 = */ NULL, \
-    /* .new_character         = */ NULL, \
-    /* .new_line              = */ NULL, \
-    /* .error                 = */ NULL, \
-    /* .wait_set              = */ NULL, \
-    /* .wait_get              = */ NULL, \
+    /* .on_start              = */ (NULL), \
+    /* .on_stop               = */ (NULL), \
+    /* .on_full               = */ (NULL), \
+    /* .on_empty              = */ (NULL), \
+    /* .on_new_character      = */ (NULL), \
+    /* .on_new_line           = */ (NULL), \
+    /* .on_error              = */ (NULL), \
+    /* .on_wait_set           = */ (NULL), \
+    /* .on_wait_get           = */ (NULL), \
     /* .consumer_ptr          = */ (DATA), \
     /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
     /* .length                = */ ATOMIC_VAR_INIT(0), \
     /* .lines                 = */ ATOMIC_VAR_INIT(0), \
     /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .user_data             = */ (NULL), \
 } //;
 
 
@@ -887,6 +922,7 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .length                = */ ATOMIC_VAR_INIT(0), \
     /* .lines                 = */ ATOMIC_VAR_INIT(0), \
     /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .user_data             = */ (NULL), \
 } //;
 
 #endif

@@ -1,6 +1,7 @@
 //! @file
 //! @brief The buffer source file.
 
+
 /*---------------------------------------------------------------------*
  *  private: include files
  *---------------------------------------------------------------------*/
@@ -140,6 +141,7 @@ void buffer_copy(const buffer_t * object, buffer_t * dest)
     BUFFER_COPY_ATOMIC(object, dest, length);
     BUFFER_COPY_ATOMIC(object, dest, lines);
     BUFFER_COPY_ATOMIC(object, dest, state);
+    BUFFER_COPY_FIELD(object, dest, user_data);
 
 }
 
@@ -184,7 +186,8 @@ bool buffer_equal(const buffer_t * object, const buffer_t * object2)
         BUFFER_COMPARE_ATOMIC(object, object2, producer_ptr) &&
         BUFFER_COMPARE_ATOMIC(object, object2, length) &&
         BUFFER_COMPARE_ATOMIC(object, object2, lines) &&
-        BUFFER_COMPARE_ATOMIC(object, object2, state);
+        BUFFER_COMPARE_ATOMIC(object, object2, state) &&
+        BUFFER_COMPARE_FIELD(object, object2, user_data);
 }
 
 #undef BUFFER_COMPARE_FIELD
@@ -366,6 +369,8 @@ bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start)
     atomic_init(&object->length, 0);
     atomic_init(&object->lines, 0);
     atomic_init(&object->state, 0);
+
+    object->user_data = NULL;
 
     if((NULL != data) && start)
     {
