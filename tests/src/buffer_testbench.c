@@ -521,7 +521,7 @@ static int buffer_test_set_get_blocking(void)
     if('9' != buf[9] ){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.wait_set = buffer_test_set_get_blocking_wait;
+    obj.on_wait_set = buffer_test_set_get_blocking_wait;
 
     saved = buffer_set(&obj, '0');
     if(false != saved){ errors += 1; }
@@ -530,7 +530,7 @@ static int buffer_test_set_get_blocking(void)
     if('\0' != buf[10] ){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_set = NULL;
+    obj.on_wait_set = NULL;
 
 
 
@@ -585,7 +585,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.wait_get = buffer_test_set_get_blocking_wait;
+    obj.on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     length = buffer_length(ptr);
@@ -593,7 +593,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_get = NULL;
+    obj.on_wait_get = NULL;
 
 
 
@@ -960,13 +960,13 @@ static int buffer_test_get_over_last(void)
 
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.wait_get = buffer_test_set_get_blocking_wait;
+    obj.on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_set = NULL;
+    obj.on_wait_set = NULL;
 
     return errors;
 }
@@ -1157,7 +1157,7 @@ static int buffer_test_get_set_wait_force_stop(void)
 
     char buf[2+1] = { 0 };
     buffer_t obj = BUFFER_INIT(buf, sizeof(buf)-1, true);
-    obj.wait_set = buffer_test_get_set_wait_force_stop_wait;
+    obj.on_wait_set = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     buffer_set(&obj, '1');
@@ -1174,12 +1174,12 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != buf[2]){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_set = NULL;
+    obj.on_wait_set = NULL;
     buffer_start(&obj);
 
 
 
-    obj.wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
     c = buffer_get(&obj);
     if('1' != c){ errors += 1; }
@@ -1189,7 +1189,7 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != c){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_get = NULL;
+    obj.on_wait_get = NULL;
     buffer_start(&obj);
 
 
@@ -1206,14 +1206,14 @@ static int buffer_test_get_set_wait_force_stop(void)
     c = buffer_get_available_or_null(&obj);
     if('\0' != c ){ errors += 1; }
 
-    obj.wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.wait_set = NULL;
+    obj.on_wait_set = NULL;
     buffer_start(&obj);
 
     return errors;
@@ -1374,6 +1374,8 @@ static int buffer_test_buffer_read_line(void)
     char in6[30] = { "I\nYou\nHe\nShe\nIt\n\0--""----------"};
     in6[29] = '-';
 
+    char in7[] = { "This is not a line"};
+
     char ref1[30] = { "I\0" "-------" "----------" "----------" }; ref1[29] = '-';
     char ref2[30] = { "You\0" "-----" "----------" "----------" }; ref2[29] = '-';
     char ref3[30] = { "He\0" "------" "----------" "----------" }; ref3[29] = '-';
@@ -1396,7 +1398,9 @@ static int buffer_test_buffer_read_line(void)
     for(size_t i = 0; i < 4; i++)
     {
         for(size_t i = 0; i < sizeof(buf_get); i++){ buf_get[i] = '-'; }
-        buffer_read_line(&obj, buf_get, sizeof(buf_get));
+        size = buffer_read_line(&obj, buf_get, sizeof(buf_get));
+        if(size != strlen(refs[i])){ errors += 1; }
+        if(size != strlen(buf_get)){ errors += 1; }
         if(0 != memcmp(buf_get, refs[i], 30)){ errors += 1; }
     }
 
@@ -1411,9 +1415,23 @@ static int buffer_test_buffer_read_line(void)
     for(size_t i = 0; i < 5; i++)
     {
         for(size_t i = 0; i < sizeof(buf_get); i++){ buf_get[i] = '-'; }
-        buffer_read_line(&obj, buf_get, sizeof(buf_get));
+        size = buffer_read_line(&obj, buf_get, sizeof(buf_get));
+        if(size != strlen(refs[i])){ errors += 1; }
+        if(size != strlen(buf_get)){ errors += 1; }
         if(0 != memcmp(buf_get, refs[i], 30)){ errors += 1; }
     }
+
+
+    for(size_t i = 0; i < sizeof(buf_set); i++){ buf_set[i] = '+'; }
+    if(true != buffer_clear(&obj)){ errors += 1; }
+    size = buffer_write(&obj, in7, sizeof(in7));
+    if((sizeof(in7)-1) != size ){ errors += 1; }
+    if(0 != buffer_lines(&obj) ){ errors += 1; }
+
+    size = buffer_read_line(&obj, buf_get, sizeof(buf_get));
+    if(0 != size ){ errors += 1; }
+
+
 
 
 
@@ -1638,7 +1656,7 @@ static void buffer_run_example_1(void)
     buffer_t obj;
 
     buffer.Init(&obj, buf, sizeof(buf), true);
-    obj.new_line = buffer_run_example_handler;
+    obj.on_new_line = buffer_run_example_handler;
 
     buffer.Write(&obj, "Hi you", 2);
     buffer.Set(&obj, '\n');
@@ -1649,7 +1667,7 @@ static void buffer_run_example_2(void)
     buffer_t * p = buffer.ObjectAllocate(NULL, 10, true);
     if(NULL != p)
     {
-        p->new_line = buffer_run_example_handler;
+        p->on_new_line = buffer_run_example_handler;
         buffer.Write(p, "Hi you", 2);
         buffer.Set(p, '\n');
     }
@@ -1658,17 +1676,10 @@ static void buffer_run_example_2(void)
 
 static char uart_buf[10];
 static buffer_t uart = BUFFER_INIT(uart_buf, sizeof(uart_buf), false);
-static bool uart_ready = false;
-
-static void buffer_run_example_3_handler()
-{
-    uart_ready = true;
-}
 
 static void buffer_run_example_3_init(void)
 {
     buffer.Start(&uart);
-    uart.new_line = buffer_run_example_3_handler;
     uart.end_of_line_character = '\r';
 }
 
@@ -1681,15 +1692,17 @@ static void buffer_run_example_3_receive(void)
 
 static void buffer_run_example_3_main_loop(void)
 {
-    if(uart_ready && buffer.Lines(&uart))
-    {
-        char input[10];
-        uart_ready = true;
-        buffer.ReadLine(&uart, input, sizeof(input));
+    char input[10];
 
+    // while(1) {
+
+    if(buffer.ReadLine(&uart, input, sizeof(input)))
+    {
         printf("Out: %s\n", input);
         fflush(stdout);
     }
+
+    // }
 }
 
 /*---------------------------------------------------------------------*
