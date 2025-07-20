@@ -38,7 +38,9 @@ extern "C" {
 }
 
   #ifndef _Atomic
+    //! @brief See: \ref buffer_c_and_cpp_atomic_header
     #define _Atomic(X) std::atomic<X>
+    //! @brief Undoes the change using the undef, see: \ref buffer_c_and_cpp_atomic_header
     #define UNDEFINE_ATOMIC
   #endif
 
@@ -76,11 +78,7 @@ extern "C" {
 
 #ifdef __CDT_PARSER__
 
-  #error This must not be compiled
-
-  #ifdef __cplusplus
-
-  #else
+  #ifndef __cplusplus
 
     #define _Atomic(T) T
 
@@ -113,6 +111,7 @@ extern "C" {
 // #include <stdatomic.h> is used in C and C++
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 
@@ -120,20 +119,24 @@ extern "C" {
  *  public: define
  *---------------------------------------------------------------------*/
 
-#ifdef __cplusplus
-
 #ifndef INLINE
 
   #if defined(_MSC_VER)
+
+    //! @brief Inline macro to add compiler-specific options (Microsoft C/C++ compiler)
     #define INLINE __forceinline
+
   #elif defined(__GNUC__) || defined(__clang__)
+
+    //! @brief Inline macro to add compiler-specific options (GNU/clang)
     #define INLINE inline __attribute__((always_inline))
+
   #else
+
+    //! @brief Inline macro without compiler-specific options
     #define INLINE inline
+
   #endif
-
-#endif
-
 
 #endif
 
@@ -157,6 +160,30 @@ extern "C" {
     #define BUFFER_ENABLE_HANDLER
 
   #endif
+
+#endif
+
+//! @}
+
+
+//! @defgroup atomic_var_init_check Check version for atomic initialization macro
+//!
+//! @details To support multiple versions as a library, the version must be checked
+//! and the function is used depending on this.
+//!
+//! @{
+
+#if __STDC_VERSION__ < 202311L
+
+  // ::ATOMIC_VAR_INIT() is available
+  //! @brief See: \ref atomic_var_init_check
+  #define ATOMIC_VAR_INIT_MOCK(x) ATOMIC_VAR_INIT(x)
+
+#else
+
+  // From C23 ::ATOMIC_VAR_INIT() is deprecated
+  //! @brief See: \ref atomic_var_init_check
+  #define ATOMIC_VAR_INIT_MOCK(x) (x)
 
 #endif
 
@@ -898,10 +925,10 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .on_wait_set           = */ (NULL), \
     /* .on_wait_get           = */ (NULL), \
     /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .producer_ptr          = */ ATOMIC_VAR_INIT_MOCK(DATA), \
+    /* .length                = */ ATOMIC_VAR_INIT_MOCK(0), \
+    /* .lines                 = */ ATOMIC_VAR_INIT_MOCK(0), \
+    /* .state                 = */ ATOMIC_VAR_INIT_MOCK( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
     /* .user_data             = */ (NULL), \
 } //;
 
@@ -918,10 +945,10 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
     /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .producer_ptr          = */ ATOMIC_VAR_INIT_MOCK(DATA), \
+    /* .length                = */ ATOMIC_VAR_INIT_MOCK(0), \
+    /* .lines                 = */ ATOMIC_VAR_INIT_MOCK(0), \
+    /* .state                 = */ ATOMIC_VAR_INIT_MOCK( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
     /* .user_data             = */ (NULL), \
 } //;
 
