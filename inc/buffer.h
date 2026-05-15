@@ -2,12 +2,6 @@
 //! @brief The buffer header file.
 //!
 //! @details The module can be used in C and C++.
-//!
-//! Atomic operations are used with the header `stdatomic.h` in C or the header `atomic` C++.
-//! For more information see: @ref buffer_c_and_cpp_atomic_header
-//!
-//! All atomic operations must be performed atomically.
-//! For more information see: @ref buffer_s
 
 
 #ifndef INC_BUFFER_H_
@@ -15,64 +9,71 @@
 
 
 /*---------------------------------------------------------------------*
- *  public: include files - atomic handling
+ *  public: atomic handling
  *---------------------------------------------------------------------*/
 
-//! @defgroup buffer_c_and_cpp_atomic_header C and C++ atomic header
+//! @defgroup stdatomic_support_in_c_and_cpp To use stdatomic, you must use at
+//!           least the following versions
 //!
-//! @details The module can be used in C and C++.
-//! Atomic operations are used with the header `stdatomic.h` in C or the header `<atomic>` C++.
-//! According to the SystemC Language Working Group (LWG), the Atomic data types can be used across
-//! systems in C and C++. Since there is no `cstdatomic.h`, the appropriate header file must be
-//! included via preprocessor instructions. One recommendation is:
-//! <a href="https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0943r6.html">open-std.org</a>
+//! @details To use the library in C, all you need is c11. In C++, you can also
+//!          use the library with c++11. In this case, however, interface
+//!          functions are required due to the different types, and this header
+//!          cannot be used. This header is intended for use in both C and C++.
+//!          Therefore, the header must work in both languages. stdatomic can
+//!          be used, but only starting with c++23.
 //!
 //! @{
 
+//! @def HAS_CPP23
+//! @brief Checks whether C++23 or a newer version is being used
+//! @return Returns the result of the version check
+//! @retval 1 if C++23 or a newer version is being used
+//! @retval 0 if C++23 or a later version was not used
+
+//! @def HAS_C11
+//! @brief Checks whether C11 or a newer version is being used
+//! @return Returns the result of the version check
+//! @retval 1 if C11 or a newer version is being used
+//! @retval 0 if C11 or a later version was not used
+
 #ifdef __cplusplus
-
-#include <atomic>
-
-extern "C" {
-#include <stdatomic.h>
-}
-
-  #ifndef _Atomic
-    //! @brief See: \ref buffer_c_and_cpp_atomic_header
-    #define _Atomic(X) std::atomic<X>
-    //! @brief Undoes the change using the undef, see: \ref buffer_c_and_cpp_atomic_header
-    #define UNDEFINE_ATOMIC
-  #endif
-
-
+  #define HAS_CPP23 ( 202302L <= __cplusplus )
+  #define HAS_C11   0
 #else
-
-#include <stdatomic.h>
-
+  #define HAS_CPP23 0
+  #ifdef __STDC_VERSION__
+    #define HAS_C11 ( 201112L <= __STDC_VERSION__ )
+  #else
+    #define HAS_C11 0
+  #endif
 #endif
 
+#if !(HAS_CPP23 || HAS_C11)
+  #error "Requires C11 or C++23"
+#endif
 
 //! @}
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//! @defgroup stdatomic_support_in_cpp The stdatomic header is
+//!           supported in C and C++
+//!
+//! @details With C++23, the header is compatible between C and C++.
+//!
+//! @{
 
-/*---------------------------------------------------------------------*
- *  public: workaround CDT indexer
- *---------------------------------------------------------------------*/
+#include <stdatomic.h>
 
-//! @defgroup buffer_cdt_parser_workaround Workaround for CDT indexer
+//! @}
+
+
+//! @defgroup cdt_parser_workaround Workaround for CDT indexer
 //!
 //! @details The CDT indexer has problems with the atomic functions.
-//! For this reason, the functions are redefined, but without the claim
-//! of an atomic operation.
-//!
-//! The same applies to the type `_Atomic(T)`. Without changing the
-//! reserved keyword, the CDT indexer or auto-completion will not find
-//! the variable. A disadvantage is that no information is displayed
-//! about the fact that it is an atomic type.
+//!          For this reason `_Atomic(T)` is redefined. Without changing the
+//!          reserved keyword, the CDT indexer or auto-completion will not find
+//!          the variable. A disadvantage is that no information is displayed
+//!          about the fact that it is an atomic type.
 //!
 //! @{
 
@@ -80,21 +81,18 @@ extern "C" {
 
   #ifndef __cplusplus
 
-    #define _Atomic(T) T
+    #define _Atomic(...) __VA_ARGS__
 
-    #define atomic_init(PTR, VAL) \
-        (*(PTR) = (VAL)) //;
+    #define atomic_init(PTR, VAL) (*(PTR) = (VAL)) //;
 
-    #define atomic_store(PTR, VAL) \
-        (*(PTR) = (VAL)) //;
+    #define atomic_store(PTR, VAL) (*(PTR) = (VAL)) //;
 
-    #define atomic_load(PTR) \
-        (*(PTR)) //;
+    #define atomic_load(PTR) (*(PTR)) //;
 
     #define atomic_compare_exchange_strong(PTR, VAL, DES) \
-        ((*(VAL) == *(PTR)) ? (*(PTR) = (DES), 1) : 0) //;
+      ((*(VAL) == *(PTR)) ? (*(PTR) = (DES), 1) : 0) //;
 
-    #define _Static_assert(CONDITION, TEXT)
+    #define _Static_assert(CONDITION, TEXT) //;
 
   #endif
 
@@ -103,12 +101,36 @@ extern "C" {
 //! @}
 
 
+//! @defgroup atomic_var_init_check Support for use in C and C++ after deprecation
+//!
+//! @details In C and in C++ `ATOMIC_VAR_INIT(value)` was deprecated.
+//!          It must be defined so that it is supported in newer versions.
+//!
+//! @{
+
+//! @brief Fallback definition for atomic variable initialization.
+//!
+//! @details Defines ATOMIC_VAR_INIT as a direct value assignment if not
+//!          already provided by the standard library or platform.
+//!          This is a compatibility fallback and does not provide atomic
+//!          semantics by itself.
+//!
+//! @return The value X unchanged.
+#ifndef ATOMIC_VAR_INIT
+#  define ATOMIC_VAR_INIT(VALUE) (VALUE)
+#endif
+
+//! @}
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /*---------------------------------------------------------------------*
  *  public: include files
  *---------------------------------------------------------------------*/
-
-// #include <atomic> is used in C++
-// #include <stdatomic.h> is used in C and C++
 
 #include <stdint.h>
 #include <stddef.h>
@@ -118,28 +140,6 @@ extern "C" {
 /*---------------------------------------------------------------------*
  *  public: define
  *---------------------------------------------------------------------*/
-
-#ifndef INLINE
-
-  #if defined(_MSC_VER)
-
-    //! @brief Inline macro to add compiler-specific options (Microsoft C/C++ compiler)
-    #define INLINE __forceinline
-
-  #elif defined(__GNUC__) || defined(__clang__)
-
-    //! @brief Inline macro to add compiler-specific options (GNU/clang)
-    #define INLINE inline __attribute__((always_inline))
-
-  #else
-
-    //! @brief Inline macro without compiler-specific options
-    #define INLINE inline
-
-  #endif
-
-#endif
-
 
 //! @defgroup buffer_disable_handler Additional option to save storage space
 //!
@@ -164,101 +164,6 @@ extern "C" {
 #endif
 
 //! @}
-
-
-//! @defgroup atomic_var_init_check Check version for atomic initialization macro
-//!
-//! @details To support multiple versions as a library, the version must be checked
-//! and the function is used depending on this.
-//!
-//! @{
-
-#if __STDC_VERSION__ < 202311L
-
-  // ::ATOMIC_VAR_INIT() is available
-  //! @brief See: \ref atomic_var_init_check
-  #define ATOMIC_VAR_INIT_MOCK(x) ATOMIC_VAR_INIT(x)
-
-#else
-
-  // From C23 ::ATOMIC_VAR_INIT() is deprecated
-  //! @brief See: \ref atomic_var_init_check
-  #define ATOMIC_VAR_INIT_MOCK(x) (x)
-
-#endif
-
-//! @}
-
-
-/*---------------------------------------------------------------------*
- *  public: type test
- *---------------------------------------------------------------------*/
-
-#ifdef __cplusplus
-
-static_assert(sizeof(std::atomic<char*>) == sizeof(char *),
-    "Layout mismatch between C and C++ atomic pointer");
-
-static_assert(alignof(std::atomic<char*>) == alignof(char*),
-    "Alignment mismatch between C and C++ atomic pointer");
-
-static_assert(std::atomic<char*>::is_always_lock_free,
-    "atomic<char*> is not always lock-free");
-
-static_assert(sizeof(std::atomic<size_t>) == sizeof(size_t),
-    "Layout mismatch between C and C++ atomic pointer");
-
-static_assert(alignof(std::atomic<size_t>) == alignof(size_t),
-    "Alignment mismatch between C and C++ atomic pointer");
-
-static_assert(std::atomic<size_t>::is_always_lock_free,
-    "atomic<size_t> is not always lock-free");
-
-static_assert(sizeof(std::atomic<unsigned char>) == sizeof(unsigned char),
-    "Layout mismatch between C and C++ atomic pointer");
-
-static_assert(alignof(std::atomic<unsigned char>) == alignof(unsigned char),
-    "Alignment mismatch between C and C++ atomic pointer");
-
-static_assert(std::atomic<unsigned char>::is_always_lock_free,
-    "atomic<unsigned char> is not always lock-free");
-
-
-#else
-
-_Static_assert(sizeof(_Atomic(char *)) == sizeof(char *),
-    "Layout mismatch between _Atomic(char *) and char *");
-
-_Static_assert(_Alignof(_Atomic(char *)) == _Alignof(char *),
-    "Alignment mismatch between _Atomic(char *) and char *");
-
-_Static_assert(ATOMIC_POINTER_LOCK_FREE == 2,
-    "_Atomic(char *) is not always lock-free");
-
-_Static_assert(sizeof(_Atomic(size_t)) == sizeof(size_t),
-    "Layout mismatch between _Atomic(size_t) and size_t");
-
-_Static_assert(_Alignof(_Atomic(size_t)) == _Alignof(size_t),
-    "Alignment mismatch between _Atomic(size_t) and size_t");
-
-// For size_t, no direct macro, use pointer-sized atomic check
-_Static_assert(sizeof(size_t) == sizeof(void *),
-    "Expected size_t to be pointer-sized");
-
-_Static_assert(ATOMIC_POINTER_LOCK_FREE == 2,
-    "_Atomic(size_t) is not always lock-free");
-
-_Static_assert(sizeof(_Atomic(unsigned char)) == sizeof(unsigned char),
-    "Layout mismatch between _Atomic(unsigned char) and unsigned char");
-
-_Static_assert(_Alignof(_Atomic(unsigned char)) == _Alignof(unsigned char),
-    "Alignment mismatch between _Atomic(unsigned char) and unsigned char");
-
-_Static_assert(ATOMIC_CHAR_LOCK_FREE == 2,
-    "_Atomic(unsigned char) is not always lock-free");
-
-
-#endif
 
 
 /*---------------------------------------------------------------------*
@@ -925,10 +830,10 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .on_wait_set           = */ (NULL), \
     /* .on_wait_get           = */ (NULL), \
     /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT_MOCK(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT_MOCK(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT_MOCK(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT_MOCK( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
+    /* .length                = */ ATOMIC_VAR_INIT(0), \
+    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
+    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
     /* .user_data             = */ (NULL), \
 } //;
 
@@ -945,10 +850,10 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
     /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT_MOCK(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT_MOCK(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT_MOCK(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT_MOCK( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
+    /* .length                = */ ATOMIC_VAR_INIT(0), \
+    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
+    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
     /* .user_data             = */ (NULL), \
 } //;
 
@@ -956,40 +861,9 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
 
 
 #ifdef __cplusplus
-
-static INLINE char * atomic_load(char ** raw_ptr)
-{
-    return std::atomic_load(reinterpret_cast<std::atomic<char*>*>(raw_ptr));
-}
-
-static INLINE void atomic_store(char ** raw_ptr, char * desired)
-{
-    std::atomic_store(reinterpret_cast<std::atomic<char*>*>(raw_ptr), desired);
-}
-
-static INLINE bool atomic_compare_exchange_strong(char ** raw_ptr, char ** raw_ptr_expected, char * desired)
-{
-    return atomic_compare_exchange_strong(reinterpret_cast<std::atomic<char*>*>(raw_ptr), raw_ptr_expected, desired);
-}
-
-static INLINE char * atomic_fetch_add(char ** raw_ptr, ptrdiff_t arg)
-{
-    return atomic_fetch_add(reinterpret_cast<std::atomic<char*>*>(raw_ptr), arg);
-}
-
-#endif
-
-
-#ifdef __cplusplus
 }
 #endif
 
-
-#ifdef __cplusplus
-#ifdef UNDEFINE_ATOMIC
-#undef _Atomic
-#endif
-#endif
 
 #endif /* INC_BUFFER_H_ */
 
