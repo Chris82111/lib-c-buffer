@@ -1,5 +1,14 @@
 # lib-c-buffer
 
+<div align="center">
+
+  [![C](https://img.shields.io/badge/language-C-a9bacd)](https://www.c-language.org/ "Link to web page")
+  [![C++](https://img.shields.io/badge/language-C%2B%2B-649ad2)](https://isocpp.org/ "Link to web page") \
+  [![Visual Studio Code](https://img.shields.io/badge/IDE-Visual%20Studio%20Code-0065a9)](https://code.visualstudio.com/ "Link to web page")
+  [![Eclipse](https://img.shields.io/badge/IDE-Eclipse-3f3179)](https://www.eclipse.org/ "Link to web page")
+
+</div>
+
 This C library provides a conveniently usable `buffer_t` type for managing a `char` array as an FIFO buffer. It enables simple filling and emptying - without the typical complexities of conventional synchronization. The library is written in pure C and provides a compatible header file for use in C and C++ projects - bidirectional and flexible.
 
 The library was developed efficiently, but without a focus on speed, the focus is a lock-free implementation and the effective handling of parallel and concurrent tasks. As a result, it is highly versatile and suitable for use across a wide range of platforms, from embedded systems to high-performance computers.
