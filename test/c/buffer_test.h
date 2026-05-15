@@ -1,7 +1,7 @@
-#ifndef INC_BUFFER_TESTBENCH_H_
-#define INC_BUFFER_TESTBENCH_H_
+#ifndef INC_BUFFER_TEST_H
+#define INC_BUFFER_TEST_H
 
-int buffer_testbench(void);
+int buffer_test(void);
 
 
-#endif /* INC_BUFFER_TESTBENCH_H_ */
+#endif /* INC_BUFFER_TEST_H */
