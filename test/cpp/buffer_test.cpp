@@ -2,7 +2,7 @@
  *  private: include files
  *---------------------------------------------------------------------*/
 
-#include "buffer_testbench.h"
+#include "buffer_test.h"
 #include "buffer.h"
 
 #include <stdint.h>
@@ -122,7 +122,7 @@ static int buffer_test_threads(void)
  *  public:  functions
  *---------------------------------------------------------------------*/
 
-int buffer_testbench_cpp(void)
+int buffer_test(void)
 {
     int errors = 0;
 
