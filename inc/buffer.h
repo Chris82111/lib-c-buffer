@@ -411,13 +411,14 @@ struct buffer_sc
   //! ::buffer_is_stoped() to check if the buffer could be stopped.
   //!
   //! @param[in,out] object The buffer object
+  //! @param[in,out] handlers Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
   //! @param data The `char` array which stores the data
   //! @param sizeof_data Length of the `char` array in which the data is stored. `sizeof()` can be used if it is an array whose size is known at compile time.
   //! @param start Starting or stopping the buffer, if parameter @p data is NULL, the buffer cannot be started.
   //! @return Returns whether the buffer could be stopped without problems.
   //! @retval true The buffer was successfully stopped.
   //! @retval false The buffer could not be stopped.
-  bool (* Init) (buffer_t * object, char * data, size_t sizeof_data, bool start);
+  bool (* Init) (buffer_t * object, buffer_handler_t * handlers, char * data, size_t sizeof_data, bool start);
 
   //! @brief Checks if the buffer is empty
   //!
@@ -497,37 +498,6 @@ struct buffer_sc
   //! @retval 0 Returns a binary null, or ('\\0') if nothing is available
   //! @retval else The read character
   char (* LookAvailableOrNull) (buffer_t * object);
-
-  //! @brief Dynamic allocation of memory for the object
-  //!
-  //! @details Always check if the function returns a `NULL` pointer.
-  //!
-  //! The assigned object must be released again with the function ::buffer_object_free().
-  //! If it is ensured that the buffer is stopped (::buffer_stop_force(), ::buffer_stop_try())
-  //! then the standard function ::free() can be used.
-  //!
-  //! @param data The `char` array which stores the data, can be `NULL`.
-  //! If NULL is passed and the parameter @p sizeof_data has a value other than zero,
-  //! memory space is also reserved for the data array.
-  //! @param sizeof_data Length of the `char` array in which the data is stored. ::sizeof() can be used if it is an array whose size is known at compile time.
-  //! @param start Starting or stopping the buffer, if parameter @p data is `NULL`, the buffer cannot be started.
-  //! @return Returns a pointer to the dynamically allocated memory.
-  //! @retval NULL Allocation failed
-  //! @retval else The pointer
-  buffer_t * (* ObjectAllocate) (char * data, size_t sizeof_data, bool start);
-
-  //! @brief Release memory
-  //!
-  //! @details Which was previously allocated by the function ::buffer_object_allocate().
-  //!
-  //! If it is ensured that the buffer is stopped (::buffer_stop_force(), ::buffer_stop_try())
-  //! then the standard function ::free() can be used.
-  //!
-  //! @param[in,out] object The buffer object, `NULL` is allowed
-  //! @return Returns whether the buffer could be stopped without problems.
-  //! @retval true The buffer was successfully stopped.
-  //! @retval false The buffer could not be stopped or object was `NULL`.
-  bool (* ObjectFree)(buffer_t * object);
 
   //! @brief Reads a string from the buffer
   //!
@@ -786,13 +756,14 @@ char buffer_get_available_or_null(buffer_t * object);
 //! ::buffer_is_stoped() to check if the buffer could be stopped.
 //!
 //! @param[in,out] object The buffer object
+//! @param[in,out] handlers Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
 //! @param data The `char` array which stores the data
 //! @param sizeof_data Length of the `char` array in which the data is stored. `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param start Starting or stopping the buffer, if parameter @p data is NULL, the buffer cannot be started.
 //! @return Returns whether the buffer could be stopped without problems.
 //! @retval true The buffer was successfully stopped.
 //! @retval false The buffer could not be stopped.
-bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start);
+bool buffer_init(buffer_t * object, buffer_handler_t * handlers, char * data, size_t sizeof_data, bool start);
 
 //! @brief Checks if the buffer is empty
 //!
@@ -1099,18 +1070,18 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
 //! @param DATA Start address of the buffer
 //! @param DATA_LENGTH Length of the buffer
 //! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) \
+#define BUFFER_INIT(HANDLERS, DATA, DATA_LENGTH, START) \
 (buffer_t){ \
-    /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
-    /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
-    /* .end_of_line_character = */ '\n', \
-    /* .handlers              = */ NULL, \
-    /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
-    /* .user_data             = */ NULL, \
+  /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
+  /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
+  /* .end_of_line_character = */ '\n', \
+  /* .handlers              = */ (HANDLERS), \
+  /* .consumer_ptr          = */ (DATA), \
+  /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
+  /* .length                = */ ATOMIC_VAR_INIT(0), \
+  /* .lines                 = */ ATOMIC_VAR_INIT(0), \
+  /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+  /* .user_data             = */ NULL, \
 } //;
 
 

@@ -37,8 +37,6 @@ const struct buffer_sc buffer =
     buffer_length,
     buffer_lines,
     buffer_look_available_or_null,
-    buffer_object_allocate,
-    buffer_object_free,
     buffer_read,
     buffer_read_line,
     buffer_read_to,
@@ -246,7 +244,7 @@ char buffer_get_available_or_null(buffer_t * object)
   return c;
 }
 
-bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start)
+bool buffer_init(buffer_t * object, buffer_handler_t * handlers, char * data, size_t sizeof_data, bool start)
 {
   if(NULL == object){ return false; }
 
@@ -266,8 +264,7 @@ bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start)
 
   object->end_of_line_character = '\n';
 
-#warning Manually Creating Handlers
-  object->handlers = NULL;
+  object->handlers = handlers;
   if (object->handlers)
   {
     object->handlers->on_start = NULL;
@@ -354,36 +351,6 @@ char buffer_look_available_or_null(buffer_t * object)
 
     atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
     return c;
-}
-
-buffer_t * buffer_object_allocate(char * data, size_t sizeof_data, bool start)
-{
-    buffer_t * object;
-
-    if(NULL != data || 0 == sizeof_data)
-    {
-        object = (buffer_t *)malloc(sizeof(buffer_t));
-    }
-    else
-    {
-        object = (buffer_t *)malloc(sizeof(buffer_t) + sizeof_data);
-        data = ((char *)object) + sizeof(buffer_t);
-    }
-
-    buffer_init(object, data, sizeof_data, start);
-
-    return object;
-}
-
-bool buffer_object_free(buffer_t * object)
-{
-    if(NULL == object) { return false; }
-
-    bool stopped = buffer_stop_force(object);
-
-    free(object);
-
-    return stopped;
 }
 
 size_t buffer_read(buffer_t * object, char * dest, size_t n)
@@ -492,21 +459,6 @@ bool buffer_reset(buffer_t * object, bool start)
   bool stopped = (BUFFER_FLAGS_STOP == atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE));
 
   object->end_of_line_character = '\n';
-
-#warning Manually Creating Handlers
-  object->handlers = NULL;
-  if (object->handlers)
-  {
-    object->handlers->on_start = NULL;
-    object->handlers->on_stop = NULL;
-    object->handlers->on_full = NULL;
-    object->handlers->on_empty = NULL;
-    object->handlers->on_new_character = NULL;
-    object->handlers->on_new_line = NULL;
-    object->handlers->on_error = NULL;
-    object->handlers->on_wait_set = NULL;
-    object->handlers->on_wait_get = NULL;
-  }
 
   object->consumer_ptr = object->data;
 
