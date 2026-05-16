@@ -378,8 +378,6 @@ struct buffer_s {
 struct buffer_sc
 {
     bool       (* Clear    ) (      buffer_t * object);     ///< @brief See ::buffer_clear()
-    void       (* Copy     ) (const buffer_t * object, buffer_t * dest);          ///< @brief See ::buffer_copy()
-    bool       (* Equal    ) (const buffer_t * object, const buffer_t * object2); ///< @brief See ::buffer_equal()
     char       (* Get      ) (      buffer_t * object);     ///< @brief See ::buffer_get()
     char       (* GetAvailableOrNull ) (buffer_t * object); ///< @brief See ::buffer_get_available_or_null()
     bool       (* Init     ) (      buffer_t * object, char * data, size_t sizeof_data, bool start); ///< @brief See ::buffer_init()
@@ -437,33 +435,6 @@ extern const struct buffer_sc buffer;
 //! @retval false Buffer could not be clear
 //! @retval true  Buffer could be clear
 bool buffer_clear(buffer_t * object);
-
-//! @brief Copying one structure to another
-//!
-//! @details Compares all elements of the structure
-//!
-//! Can be use in:
-//! - producer/set thread.
-//! - consumer/get thread.
-//!
-//! @param[in] object Object that is copied
-//! @param[out] dest Target which is overwritten
-void buffer_copy(const buffer_t * object, buffer_t * dest);
-
-//! @brief Compares two struct objects of type ::buffer_s and returns whether they are equal
-//!
-//! @details Compares all elements of the structure
-//!
-//! Can be use in:
-//! - producer/set thread, with stopped buffer
-//! - consumer/get thread, with stopped buffer
-//!
-//! @param[in] object The buffer object
-//! @param[in] object2 The buffer object
-//! @return Returns whether the struct objects are equal
-//! @retval true  Struct objects are equal
-//! @retval false Struct objects are different
-bool buffer_equal(const buffer_t * object, const buffer_t * object2);
 
 //! @brief Reads a character or waits until it can be executed.
 //!

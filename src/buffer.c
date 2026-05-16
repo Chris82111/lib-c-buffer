@@ -28,8 +28,6 @@
 const struct buffer_sc buffer =
 {
     buffer_clear,
-    buffer_copy,
-    buffer_equal,
     buffer_get,
     buffer_get_available_or_null,
     buffer_init,
@@ -103,95 +101,6 @@ bool buffer_clear(buffer_t * object)
 
     return cleared;
 }
-
-#ifdef BUFFER_COPY_FIELD
-#error BUFFER_COPY_FIELD must not be redefined
-#endif
-
-#ifdef BUFFER_COPY_ATOMIC
-#error BUFFER_COPY_ATOMIC must not be redefined
-#endif
-
-//! @brief For simple copying of elements
-#define BUFFER_COPY_FIELD( OBJ, DEST, FIELD_NAME) (((DEST)->FIELD_NAME) = ((OBJ)->FIELD_NAME))
-
-//! @brief For simple copying of atomic elements
-#define BUFFER_COPY_ATOMIC(OBJ, DEST, FIELD_NAME) (atomic_store((&(DEST)->FIELD_NAME), atomic_load((&(OBJ)->FIELD_NAME))))
-
-void buffer_copy(const buffer_t * object, buffer_t * dest)
-{
-    if((NULL == object) || (NULL == dest)){ return; }
-
-    BUFFER_COPY_FIELD(object, dest, data);
-    BUFFER_COPY_FIELD(object, dest, last);
-    BUFFER_COPY_FIELD(object, dest, end_of_line_character);
-#ifdef BUFFER_ENABLE_HANDLER
-    BUFFER_COPY_FIELD(object, dest, on_start);
-    BUFFER_COPY_FIELD(object, dest, on_stop);
-    BUFFER_COPY_FIELD(object, dest, on_full);
-    BUFFER_COPY_FIELD(object, dest, on_empty);
-    BUFFER_COPY_FIELD(object, dest, on_new_character);
-    BUFFER_COPY_FIELD(object, dest, on_new_line);
-    BUFFER_COPY_FIELD(object, dest, on_error);
-    BUFFER_COPY_FIELD(object, dest, on_wait_set);
-    BUFFER_COPY_FIELD(object, dest, on_wait_get);
-#endif
-    BUFFER_COPY_FIELD(object, dest, consumer_ptr);
-    BUFFER_COPY_ATOMIC(object, dest, producer_ptr);
-    BUFFER_COPY_ATOMIC(object, dest, length);
-    BUFFER_COPY_ATOMIC(object, dest, lines);
-    BUFFER_COPY_ATOMIC(object, dest, state);
-    BUFFER_COPY_FIELD(object, dest, user_data);
-
-}
-
-#undef BUFFER_COPY_FIELD
-#undef BUFFER_COPY_ATOMIC
-
-
-#ifdef BUFFER_COMPARE_FIELD
-#error BUFFER_COMPARE_FIELD must not be redefined
-#endif
-
-#ifdef BUFFER_COMPARE_ATOMIC
-#error BUFFER_COMPARE_ATOMIC must not be redefined
-#endif
-
-//! @brief For simple comparison of elements
-#define BUFFER_COMPARE_FIELD( O1, O2, FIELD_NAME) (((O1)->FIELD_NAME) == ((O2)->FIELD_NAME))
-
-//! @brief For simple comparison of atomic elements
-#define BUFFER_COMPARE_ATOMIC(O1, O2, FIELD_NAME) (atomic_load(&((O1)->FIELD_NAME)) == atomic_load(&((O2)->FIELD_NAME)))
-
-bool buffer_equal(const buffer_t * object, const buffer_t * object2)
-{
-    if((NULL == object) || (NULL == object2)){ return false; }
-
-    return
-        BUFFER_COMPARE_FIELD(object, object2, data) &&
-        BUFFER_COMPARE_FIELD(object, object2, last) &&
-        BUFFER_COMPARE_FIELD(object, object2, end_of_line_character) &&
-#ifdef BUFFER_ENABLE_HANDLER
-        BUFFER_COMPARE_FIELD(object, object2, on_start) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_stop) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_full) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_empty) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_new_character) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_new_line) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_error) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_wait_set) &&
-        BUFFER_COMPARE_FIELD(object, object2, on_wait_get) &&
-#endif
-        BUFFER_COMPARE_FIELD(object, object2, consumer_ptr) &&
-        BUFFER_COMPARE_ATOMIC(object, object2, producer_ptr) &&
-        BUFFER_COMPARE_ATOMIC(object, object2, length) &&
-        BUFFER_COMPARE_ATOMIC(object, object2, lines) &&
-        BUFFER_COMPARE_ATOMIC(object, object2, state) &&
-        BUFFER_COMPARE_FIELD(object, object2, user_data);
-}
-
-#undef BUFFER_COMPARE_FIELD
-#undef BUFFER_COMPARE_ATOMIC
 
 char buffer_get(buffer_t * object)
 {

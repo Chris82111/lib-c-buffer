@@ -51,36 +51,79 @@ static int buffer_test_get_over_last(void);
 
 static int buffer_test_init(void)
 {
-    int errors = 0;
+  int errors = 0;
 
-    char buf[4 + 1];
+  size_t sizeof_buf = 4;
 
-    buffer_t obj_1 = { 0 };
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
-    }
-    buffer_init(&obj_1, buf, sizeof(buf)-1, true);
+  // The additional element is necessary to detect an overflow
+  char buf[sizeof_buf + 1];
 
-    buffer_t obj_2 = BUFFER_INIT(buf, (sizeof(buf)-1), true);
+  // Fill all memory space with 0xff
+  buffer_t obj_1;
+  for(size_t i = 0; i < sizeof(buffer_t); i++)
+  {
+      *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
+  }
 
-    buffer_t * ptrs[] = { &obj_1, &obj_2, NULL };
+  buffer_init(&obj_1, buf, sizeof_buf, true);
 
-    buffer_t ref = { 0 };
-    ref.data = buf;
-    ref.last = buf + (sizeof(buf)-1) - 1;
-    ref.end_of_line_character = '\n';
-    ref.consumer_ptr = buf;
-    atomic_init(&ref.producer_ptr, buf);
-    atomic_init(&ref.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
 
-    buffer_t * ptr;
-    for(size_t j = 0; j < LENGTH(ptrs) && NULL != (ptr = ptrs[j]); j++ )
-    {
-        if(true != buffer_equal(ptr, &ref)){ errors += 1; }
-    }
+#ifdef BUFFER_ENABLE_HANDLER
+  if (NULL != obj_1.on_start) { errors++; }
+  if (NULL != obj_1.on_stop) { errors++; }
+  if (NULL != obj_1.on_full) { errors++; }
+  if (NULL != obj_1.on_empty) { errors++; }
+  if (NULL != obj_1.on_new_character) { errors++; }
+  if (NULL != obj_1.on_new_line) { errors++; }
+  if (NULL != obj_1.on_error) { errors++; }
+  if (NULL != obj_1.on_wait_set) { errors++; }
+  if (NULL != obj_1.on_wait_get) { errors++; }
+#endif
 
-    return errors;
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_IDLE != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+
+
+
+  buffer_init(&obj_1, buf, sizeof_buf, false);
+
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
+
+  #ifdef BUFFER_ENABLE_HANDLER
+  if (NULL != obj_1.on_start) { errors++; }
+  if (NULL != obj_1.on_stop) { errors++; }
+  if (NULL != obj_1.on_full) { errors++; }
+  if (NULL != obj_1.on_empty) { errors++; }
+  if (NULL != obj_1.on_new_character) { errors++; }
+  if (NULL != obj_1.on_new_line) { errors++; }
+  if (NULL != obj_1.on_error) { errors++; }
+  if (NULL != obj_1.on_wait_set) { errors++; }
+  if (NULL != obj_1.on_wait_get) { errors++; }
+  #endif
+
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_STOP != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+
+  return errors;
 }
 
 static int buffer_test_init_sizeof_data_zero(void)
@@ -131,61 +174,52 @@ static int buffer_test_init_sizeof_data_zero(void)
 
 static int buffer_test_reset(void)
 {
-    int errors = 0;
+  int errors = 0;
 
-    char buf[4 + 1];
+  size_t sizeof_buf = 4;
 
-
-    buffer_t obj = {0};
-    buffer_t * ptr = &obj;
-
-    buffer_init(ptr, buf, sizeof(buf)-1, true);
-
-    buffer_set_possible_or_skip(&obj, '1');
-    buffer_set_possible_or_skip(&obj, '2');
-
-    buffer_reset(ptr, true);
-
-    buffer_t ref = { 0 };
-    ref.data = buf;
-    ref.last = buf + (sizeof(buf)-1) - 1;
-    ref.end_of_line_character = '\n';
-    ref.consumer_ptr = buf;
-    atomic_init(&ref.producer_ptr, buf);
-    atomic_init(&ref.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
-
-    if(true != buffer_equal(ptr, &ref)){ errors += 1; }
+  // The additional element is necessary to detect an overflow
+  char buf[sizeof_buf + 1];
 
 
-    return errors;
-}
+  buffer_t obj = {0};
+  buffer_t * ptr = &obj;
 
-static int buffer_test_copy(void)
-{
-    int errors = 0;
+  buffer_init(ptr, buf, sizeof_buf, true);
 
-    char buf[4 + 1];
-    buffer_t obj_1 = {0};
+  buffer_set_possible_or_skip(&obj, '1');
+  buffer_set_possible_or_skip(&obj, '2');
 
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
-    }
+  buffer_reset(ptr, true);
 
-    buffer_init(&obj_1, buf, sizeof(buf)-1, true);
 
-    buffer_t obj_2 = {0};
+  if (buf != ptr->data) { errors++; }
+  if ((buf + sizeof_buf - 1) != ptr->last) { errors++; }
+  if ('\n'!= ptr->end_of_line_character) { errors++; }
 
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_2) ) + i) = 0xff;
-    }
+#ifdef BUFFER_ENABLE_HANDLER
+  if (NULL != ptr->on_start) { errors++; }
+  if (NULL != ptr->on_stop) { errors++; }
+  if (NULL != ptr->on_full) { errors++; }
+  if (NULL != ptr->on_empty) { errors++; }
+  if (NULL != ptr->on_new_character) { errors++; }
+  if (NULL != ptr->on_new_line) { errors++; }
+  if (NULL != ptr->on_error) { errors++; }
+  if (NULL != ptr->on_wait_set) { errors++; }
+  if (NULL != ptr->on_wait_get) { errors++; }
+#endif
 
-    buffer_copy(&obj_1, &obj_2);
+  if (buf != ptr->consumer_ptr) { errors++; }
 
-    if(true != buffer_equal(&obj_1, &obj_2)){ errors += 1; }
+  if (buf != atomic_load(&ptr->producer_ptr)) { errors++; }
+  if (0 != atomic_load(&ptr->length)) { errors++; }
+  if (0 != atomic_load(&ptr->lines)) { errors++; }
 
-    return errors;
+  if (BUFFER_FLAGS_IDLE != atomic_load(&ptr->state)) { errors++; }
+
+  if (NULL != ptr->user_data) { errors++; }
+
+  return errors;
 }
 
 static int buffer_test_set_get_non_blocking(void)
@@ -1716,7 +1750,6 @@ int buffer_test(void)
     errors += buffer_test_init();
     errors += buffer_test_init_sizeof_data_zero();
     errors += buffer_test_reset();
-    errors += buffer_test_copy();
     errors += buffer_test_set_get_non_blocking();
     errors += buffer_test_set_get_blocking();
     errors += buffer_test_look();
