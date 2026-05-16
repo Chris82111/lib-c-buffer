@@ -787,7 +787,8 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
 //! @param DATA Start address of the buffer
 //! @param DATA_LENGTH Length of the buffer
 //! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) { \
+#define BUFFER_INIT(DATA, DATA_LENGTH, START) \
+(buffer_t){ \
     /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
@@ -816,7 +817,8 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
 //! @param DATA Start address of the buffer
 //! @param DATA_LENGTH Length of the buffer
 //! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) { \
+#define BUFFER_INIT(DATA, DATA_LENGTH, START) \
+(buffer_t){ \
     /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
