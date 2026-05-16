@@ -75,17 +75,19 @@ static int buffer_test_init(void)
   if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
   if ('\n'!= obj_1.end_of_line_character) { errors++; }
 
-#ifdef BUFFER_ENABLE_HANDLER
-  if (NULL != obj_1.on_start) { errors++; }
-  if (NULL != obj_1.on_stop) { errors++; }
-  if (NULL != obj_1.on_full) { errors++; }
-  if (NULL != obj_1.on_empty) { errors++; }
-  if (NULL != obj_1.on_new_character) { errors++; }
-  if (NULL != obj_1.on_new_line) { errors++; }
-  if (NULL != obj_1.on_error) { errors++; }
-  if (NULL != obj_1.on_wait_set) { errors++; }
-  if (NULL != obj_1.on_wait_get) { errors++; }
-#endif
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
+
 
   if (buf != obj_1.consumer_ptr) { errors++; }
 
@@ -112,17 +114,18 @@ static int buffer_test_init(void)
   if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
   if ('\n'!= obj_1.end_of_line_character) { errors++; }
 
-  #ifdef BUFFER_ENABLE_HANDLER
-  if (NULL != obj_1.on_start) { errors++; }
-  if (NULL != obj_1.on_stop) { errors++; }
-  if (NULL != obj_1.on_full) { errors++; }
-  if (NULL != obj_1.on_empty) { errors++; }
-  if (NULL != obj_1.on_new_character) { errors++; }
-  if (NULL != obj_1.on_new_line) { errors++; }
-  if (NULL != obj_1.on_error) { errors++; }
-  if (NULL != obj_1.on_wait_set) { errors++; }
-  if (NULL != obj_1.on_wait_get) { errors++; }
-  #endif
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
 
   if (buf != obj_1.consumer_ptr) { errors++; }
 
@@ -149,17 +152,18 @@ static int buffer_test_init(void)
   if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
   if ('\n'!= obj_1.end_of_line_character) { errors++; }
 
-#ifdef BUFFER_ENABLE_HANDLER
-  if (NULL != obj_1.on_start) { errors++; }
-  if (NULL != obj_1.on_stop) { errors++; }
-  if (NULL != obj_1.on_full) { errors++; }
-  if (NULL != obj_1.on_empty) { errors++; }
-  if (NULL != obj_1.on_new_character) { errors++; }
-  if (NULL != obj_1.on_new_line) { errors++; }
-  if (NULL != obj_1.on_error) { errors++; }
-  if (NULL != obj_1.on_wait_set) { errors++; }
-  if (NULL != obj_1.on_wait_get) { errors++; }
-#endif
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
 
   if (buf != obj_1.consumer_ptr) { errors++; }
 
@@ -187,17 +191,18 @@ static int buffer_test_init(void)
   if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
   if ('\n'!= obj_1.end_of_line_character) { errors++; }
 
-#ifdef BUFFER_ENABLE_HANDLER
-  if (NULL != obj_1.on_start) { errors++; }
-  if (NULL != obj_1.on_stop) { errors++; }
-  if (NULL != obj_1.on_full) { errors++; }
-  if (NULL != obj_1.on_empty) { errors++; }
-  if (NULL != obj_1.on_new_character) { errors++; }
-  if (NULL != obj_1.on_new_line) { errors++; }
-  if (NULL != obj_1.on_error) { errors++; }
-  if (NULL != obj_1.on_wait_set) { errors++; }
-  if (NULL != obj_1.on_wait_get) { errors++; }
-#endif
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
 
   if (buf != obj_1.consumer_ptr) { errors++; }
 
@@ -282,17 +287,18 @@ static int buffer_test_reset(void)
   if ((buf + sizeof_buf - 1) != ptr->last) { errors++; }
   if ('\n'!= ptr->end_of_line_character) { errors++; }
 
-#ifdef BUFFER_ENABLE_HANDLER
-  if (NULL != ptr->on_start) { errors++; }
-  if (NULL != ptr->on_stop) { errors++; }
-  if (NULL != ptr->on_full) { errors++; }
-  if (NULL != ptr->on_empty) { errors++; }
-  if (NULL != ptr->on_new_character) { errors++; }
-  if (NULL != ptr->on_new_line) { errors++; }
-  if (NULL != ptr->on_error) { errors++; }
-  if (NULL != ptr->on_wait_set) { errors++; }
-  if (NULL != ptr->on_wait_get) { errors++; }
-#endif
+  if(ptr->handlers)
+  {
+    if (NULL != ptr->handlers->on_start) { errors++; }
+    if (NULL != ptr->handlers->on_stop) { errors++; }
+    if (NULL != ptr->handlers->on_full) { errors++; }
+    if (NULL != ptr->handlers->on_empty) { errors++; }
+    if (NULL != ptr->handlers->on_new_character) { errors++; }
+    if (NULL != ptr->handlers->on_new_line) { errors++; }
+    if (NULL != ptr->handlers->on_error) { errors++; }
+    if (NULL != ptr->handlers->on_wait_set) { errors++; }
+    if (NULL != ptr->handlers->on_wait_get) { errors++; }
+  }
 
   if (buf != ptr->consumer_ptr) { errors++; }
 
@@ -568,6 +574,10 @@ static int buffer_test_set_get_blocking(void)
     atomic_init(&obj.producer_ptr, buf);
     atomic_init(&obj.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
 
+#warning Manually Creating Handlers
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
 
 
     bool atomic = atomic_is_lock_free(&(obj.length));
@@ -640,7 +650,7 @@ static int buffer_test_set_get_blocking(void)
     if('9' != buf[9] ){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_set = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_set = buffer_test_set_get_blocking_wait;
 
     saved = buffer_set(&obj, '0');
     if(false != saved){ errors += 1; }
@@ -649,7 +659,7 @@ static int buffer_test_set_get_blocking(void)
     if('\0' != buf[10] ){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
 
 
 
@@ -704,7 +714,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_get = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     length = buffer_length(ptr);
@@ -712,7 +722,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_get = NULL;
+    obj.handlers->on_wait_get = NULL;
 
 
 
@@ -1064,6 +1074,10 @@ static int buffer_test_get_over_last(void)
     atomic_init(&obj.producer_ptr, buf);
     atomic_init(&obj.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
 
+#warning Manually Creating Handlers
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
     buffer_set_possible_or_skip(&obj, '1');
     buffer_set_possible_or_skip(&obj, '2');
     buffer_set_possible_or_skip(&obj, '3');
@@ -1079,13 +1093,13 @@ static int buffer_test_get_over_last(void)
 
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_get = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
 
     return errors;
 }
@@ -1276,7 +1290,12 @@ static int buffer_test_get_set_wait_force_stop(void)
 
     char buf[2+1] = { 0 };
     buffer_t obj = BUFFER_INIT(buf, sizeof(buf)-1, true);
-    obj.on_wait_set = buffer_test_get_set_wait_force_stop_wait;
+
+#warning Manually Creating Handlers
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
+    obj.handlers->on_wait_set = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     buffer_set(&obj, '1');
@@ -1293,12 +1312,12 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != buf[2]){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
     buffer_start(&obj);
 
 
 
-    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.handlers->on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
     c = buffer_get(&obj);
     if('1' != c){ errors += 1; }
@@ -1308,7 +1327,7 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != c){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_get = NULL;
+    obj.handlers->on_wait_get = NULL;
     buffer_start(&obj);
 
 
@@ -1325,14 +1344,14 @@ static int buffer_test_get_set_wait_force_stop(void)
     c = buffer_get_available_or_null(&obj);
     if('\0' != c ){ errors += 1; }
 
-    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.handlers->on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
     buffer_start(&obj);
 
     return errors;
@@ -1775,7 +1794,12 @@ static void buffer_run_example_1(void)
     buffer_t obj;
 
     buffer.Init(&obj, buf, sizeof(buf), true);
-    obj.on_new_line = buffer_run_example_handler;
+
+#warning Manually Creating Handlers
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
+    obj.handlers->on_new_line = buffer_run_example_handler;
 
     buffer.Write(&obj, "Hi you", 2);
     buffer.Set(&obj, '\n');
@@ -1784,9 +1808,14 @@ static void buffer_run_example_1(void)
 static void buffer_run_example_2(void)
 {
     buffer_t * p = buffer.ObjectAllocate(NULL, 10, true);
+
+#warning Manually Creating Handlers
+    buffer_handler_t handlers = { 0 };
+    p->handlers = &handlers;
+
     if(NULL != p)
     {
-        p->on_new_line = buffer_run_example_handler;
+        p->handlers->on_new_line = buffer_run_example_handler;
         buffer.Write(p, "Hi you", 2);
         buffer.Set(p, '\n');
     }

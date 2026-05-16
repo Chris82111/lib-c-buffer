@@ -65,228 +65,237 @@ const struct buffer_sc buffer =
 
 bool buffer_clear(buffer_t * object)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
+  atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
 
-    bool cleared = true;
+  bool cleared = true;
 
-    if(0 < atomic_load(&object->length))
+  if(0 < atomic_load(&object->length))
+  {
+    cleared = false;
+
+    char * producer_ptr = (char *)atomic_load(&(object->producer_ptr));
+
+    size_t length = atomic_load(&object->length);
+
+    size_t lines = atomic_load(&object->lines);
+
+    if (atomic_compare_exchange_strong(&(object->producer_ptr), &producer_ptr, object->data))
     {
-        cleared = false;
+      object->consumer_ptr = object->data;
 
-        char * producer_ptr = (char *)atomic_load(&(object->producer_ptr));
+      atomic_fetch_sub(&object->length, length);
 
-        size_t length = atomic_load(&object->length);
+      atomic_fetch_sub(&object->lines, lines);
 
-        size_t lines = atomic_load(&object->lines);
+      if(object->handlers)
+      {
+        if(object->handlers->on_empty) { object->handlers->on_empty(object); }
+      }
 
-        if (atomic_compare_exchange_strong(&(object->producer_ptr), &producer_ptr, object->data))
-        {
-            object->consumer_ptr = object->data;
-
-            atomic_fetch_sub(&object->length, length);
-
-            atomic_fetch_sub(&object->lines, lines);
-
-#ifdef BUFFER_ENABLE_HANDLER
-            if(object->on_empty) { object->on_empty(object); }
-#endif
-
-            cleared = true;
-        }
+      cleared = true;
     }
+  }
 
-    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
+  atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
 
-    return cleared;
+  return cleared;
 }
 
 char buffer_get(buffer_t * object)
 {
-    if(NULL == object) { return 0; }
+  if(NULL == object) { return 0; }
 
-    char c = 0;
+  char c = 0;
 
-    if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET))
+  if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET))
+  {
+    volatile _Atomic(size_t) * length = &object->length;
+
+    char * ptr;
+
+    while(true)
     {
-        volatile _Atomic(size_t) * length = &object->length;
-
-        char * ptr;
-
-        while(true)
+      while(true)
+      {
+        if( atomic_load(length) )
         {
-            while(true)
+          break;
+        }
+
+        if (object->handlers)
+        {
+          if(object->handlers->on_wait_get)
+          {
+            if(object->handlers->on_wait_get(object))
             {
-                if( atomic_load(length) )
-                {
-                    break;
-                }
-
-#ifdef BUFFER_ENABLE_HANDLER
-                if(object->on_wait_get)
-                {
-                    if(object->on_wait_get(object))
-                    {
-                        // Function was canceled by the handler function
-                        atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
-                        return 0;
-                    }
-                }
-#endif
-
-                if(BUFFER_FLAGS_IDLE >= atomic_load(&object->state))
-                {
-                    // Function was canceled by flag
-                    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
-                    return 0;
-                }
+              // Function was canceled by the handler function
+              atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
+              return 0;
             }
+          }
+        }
 
-            ptr = object->consumer_ptr;
+        if(BUFFER_FLAGS_IDLE >= atomic_load(&object->state))
+        {
+         // Function was canceled by flag
+         atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
+         return 0;
+        }
+      }
 
-            if(ptr <= object->last)
-            {
-                c = *ptr;
+      ptr = object->consumer_ptr;
 
-                ptr += 1;
+      if(ptr <= object->last)
+      {
+        c = *ptr;
 
-                object->consumer_ptr = ptr;
+        ptr += 1;
 
-                atomic_fetch_sub(&object->length, 1);
+        object->consumer_ptr = ptr;
 
-                if (object->end_of_line_character == c)
-                {
-                    atomic_fetch_sub(&object->lines, 1);
-                }
-            }
-            else
-            {
+        atomic_fetch_sub(&object->length, 1);
 
-#ifdef BUFFER_ENABLE_HANDLER
-                if(object->on_error) { object->on_error(object); }
-#endif
+        if (object->end_of_line_character == c)
+        {
+          atomic_fetch_sub(&object->lines, 1);
+        }
+      }
+      else
+      {
 
-                // Internal error, the function is canceled
-                atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
-                return 0;
-            }
+        if (object->handlers)
+        {
+          if(object->handlers->on_error) { object->handlers->on_error(object); }
+        }
 
-            break; // Character has been read and the function can be ended.
+        // Internal error, the function is canceled
+        atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
+        return 0;
+      }
+
+      break; // Character has been read and the function can be ended.
+    }
+
+    // An attempt is made to reset the buffer
+    if (atomic_compare_exchange_strong(&(object->producer_ptr), &ptr, object->data))
+    {
+      object->consumer_ptr = object->data;
+
+      if (object->handlers)
+      {
+        if(object->handlers->on_empty) { object->handlers->on_empty(object); }
+      }
+    }
+  }
+
+  atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
+  return c;
+}
+
+char buffer_get_available_or_null(buffer_t * object)
+{
+  if(NULL == object) { return 0; }
+
+  char c = 0;
+
+  if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL))
+  {
+    if(0 < atomic_load(&object->length))
+    {
+      char * ptr = (char *)object->consumer_ptr;
+
+      if(ptr <= object->last)
+      {
+        c = *ptr;
+
+        ptr += 1;
+
+        object->consumer_ptr = ptr;
+
+        atomic_fetch_sub(&object->length, 1);
+
+        if (object->end_of_line_character == c)
+        {
+           atomic_fetch_sub(&object->lines, 1);
         }
 
         // An attempt is made to reset the buffer
         if (atomic_compare_exchange_strong(&(object->producer_ptr), &ptr, object->data))
         {
-            object->consumer_ptr = object->data;
+          object->consumer_ptr = object->data;
 
-#ifdef BUFFER_ENABLE_HANDLER
-            if(object->on_empty) { object->on_empty(object); }
-#endif
+          if (object->handlers)
+          {
+            if(object->handlers->on_empty) { object->handlers->on_empty(object); }
+          }
         }
-    }
-
-    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET);
-    return c;
-}
-
-char buffer_get_available_or_null(buffer_t * object)
-{
-    if(NULL == object) { return 0; }
-
-    char c = 0;
-
-    if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL))
-    {
-        if(0 < atomic_load(&object->length))
+      }
+      else
+      {
+        if (object->handlers)
         {
-            char * ptr = (char *)object->consumer_ptr;
-
-            if(ptr <= object->last)
-            {
-                c = *ptr;
-
-                ptr += 1;
-
-                object->consumer_ptr = ptr;
-
-                atomic_fetch_sub(&object->length, 1);
-
-                if (object->end_of_line_character == c)
-                {
-                   atomic_fetch_sub(&object->lines, 1);
-                }
-
-                // An attempt is made to reset the buffer
-                if (atomic_compare_exchange_strong(&(object->producer_ptr), &ptr, object->data))
-                {
-                    object->consumer_ptr = object->data;
-
-#ifdef BUFFER_ENABLE_HANDLER
-                    if(object->on_empty) { object->on_empty(object); }
-#endif
-                }
-            }
-            else
-            {
-#ifdef BUFFER_ENABLE_HANDLER
-                if(object->on_error) { object->on_error(object); }
-#endif
-            }
+          if(object->handlers->on_error) { object->handlers->on_error(object); }
         }
+      }
     }
+  }
 
-    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
-    return c;
+  atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_GET_AVAILABLE_OR_NULL);
+  return c;
 }
 
 bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    bool stopped = (BUFFER_FLAGS_STOP == atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE));
+  bool stopped = (BUFFER_FLAGS_STOP == atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE));
 
-    if((NULL == data) || (0 == sizeof_data))
-    {
-        data = NULL;
-        object->data = NULL;
-        object->last = NULL;
-    }
-    else
-    {
-        object->data = data;
-        object->last = data + sizeof_data - 1;
-    }
+  if((NULL == data) || (0 == sizeof_data))
+  {
+    data = NULL;
+    object->data = NULL;
+    object->last = NULL;
+  }
+  else
+  {
+    object->data = data;
+    object->last = data + sizeof_data - 1;
+  }
 
-    object->end_of_line_character = '\n';
+  object->end_of_line_character = '\n';
 
-#ifdef BUFFER_ENABLE_HANDLER
-    object->on_start = NULL;
-    object->on_stop = NULL;
-    object->on_full = NULL;
-    object->on_empty = NULL;
-    object->on_new_character = NULL;
-    object->on_new_line = NULL;
-    object->on_error = NULL;
-    object->on_wait_set = NULL;
-    object->on_wait_get = NULL;
-#endif
+#warning Manually Creating Handlers
+  object->handlers = NULL;
+  if (object->handlers)
+  {
+    object->handlers->on_start = NULL;
+    object->handlers->on_stop = NULL;
+    object->handlers->on_full = NULL;
+    object->handlers->on_empty = NULL;
+    object->handlers->on_new_character = NULL;
+    object->handlers->on_new_line = NULL;
+    object->handlers->on_error = NULL;
+    object->handlers->on_wait_set = NULL;
+    object->handlers->on_wait_get = NULL;
+  }
 
-    object->consumer_ptr = data;
+  object->consumer_ptr = data;
 
-    atomic_init(&object->producer_ptr, data);
-    atomic_init(&object->length, 0);
-    atomic_init(&object->lines, 0);
-    atomic_init(&object->state, 0);
+  atomic_init(&object->producer_ptr, data);
+  atomic_init(&object->length, 0);
+  atomic_init(&object->lines, 0);
+  atomic_init(&object->state, 0);
 
-    object->user_data = NULL;
+  object->user_data = NULL;
 
-    if((NULL != data) && start)
-    {
-        buffer_start(object);
-    }
+  if((NULL != data) && start)
+  {
+    buffer_start(object);
+  }
 
-    return stopped;
+  return stopped;
 }
 
 bool buffer_is_empty(const buffer_t * object)
@@ -478,144 +487,151 @@ size_t buffer_read_to(buffer_t * object, char * dest, size_t n, const char * to,
 
 bool buffer_reset(buffer_t * object, bool start)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    bool stopped = (BUFFER_FLAGS_STOP == atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE));
+  bool stopped = (BUFFER_FLAGS_STOP == atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE));
 
-    object->end_of_line_character = '\n';
+  object->end_of_line_character = '\n';
 
-#ifdef BUFFER_ENABLE_HANDLER
-    object->on_start = NULL;
-    object->on_stop = NULL;
-    object->on_full = NULL;
-    object->on_empty = NULL;
-    object->on_new_character = NULL;
-    object->on_new_line = NULL;
-    object->on_error = NULL;
-    object->on_wait_set = NULL;
-    object->on_wait_get = NULL;
-#endif
+#warning Manually Creating Handlers
+  object->handlers = NULL;
+  if (object->handlers)
+  {
+    object->handlers->on_start = NULL;
+    object->handlers->on_stop = NULL;
+    object->handlers->on_full = NULL;
+    object->handlers->on_empty = NULL;
+    object->handlers->on_new_character = NULL;
+    object->handlers->on_new_line = NULL;
+    object->handlers->on_error = NULL;
+    object->handlers->on_wait_set = NULL;
+    object->handlers->on_wait_get = NULL;
+  }
 
-    object->consumer_ptr = object->data;
+  object->consumer_ptr = object->data;
 
-    atomic_init(&object->producer_ptr, object->data);
-    atomic_init(&object->length, 0);
-    atomic_init(&object->lines, 0);
-    atomic_init(&object->state, 0);
+  atomic_init(&object->producer_ptr, object->data);
+  atomic_init(&object->length, 0);
+  atomic_init(&object->lines, 0);
+  atomic_init(&object->state, 0);
 
-    if((NULL != object->data) && start)
-    {
-        buffer_start(object);
-    }
+  if((NULL != object->data) && start)
+  {
+    buffer_start(object);
+  }
 
-    return stopped;
+  return stopped;
 }
 
 bool buffer_set(buffer_t * object, char c)
 {
-    if(NULL == object) { return false; }
+  if(NULL == object) { return false; }
 
-    bool saved = false;
+  bool saved = false;
 
-    if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_SET))
+  if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_SET))
+  {
+    while(true)
     {
-        while(true)
+      // the get function can change the position but only to a smaller position the start position
+      if((char *)atomic_load(&object->producer_ptr) <= object->last)
+      {
+        *(char *)atomic_fetch_add(&object->producer_ptr, 1) = c;
+
+        if (object->end_of_line_character == c)
         {
-            // the get function can change the position but only to a smaller position the start position
-            if((char *)atomic_load(&object->producer_ptr) <= object->last)
-            {
-                *(char *)atomic_fetch_add(&object->producer_ptr, 1) = c;
-
-                if (object->end_of_line_character == c)
-                {
-                    atomic_fetch_add(&object->lines, 1);
-                }
-
-                atomic_fetch_add(&object->length, 1);
-
-#ifdef BUFFER_ENABLE_HANDLER
-                if(object->on_new_character) { object->on_new_character(object, c); }
-
-                if(object->end_of_line_character == c)
-                {
-                    if(object->on_new_line) { object->on_new_line(object); }
-                }
-#endif
-
-                saved = true;
-            }
-            else
-            {
-#ifdef BUFFER_ENABLE_HANDLER
-                if(object->on_full) { object->on_full(object, c); }
-
-                if(object->on_wait_set)
-                {
-                    if(object->on_wait_set(object))
-                    {
-                        break; // Function was canceled by the handler function
-                    }
-                }
-#endif
-
-                if(BUFFER_FLAGS_IDLE >= atomic_load(&object->state))
-                {
-                    break; // Function was canceled by flag
-                }
-
-                continue; // The function waits until a character has been saved.
-            }
-
-            break; // Character has been saved and the function can be ended.
+          atomic_fetch_add(&object->lines, 1);
         }
-    }
 
-    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_SET);
-    return saved;
+        atomic_fetch_add(&object->length, 1);
+
+        if (object->handlers)
+        {
+          if(object->handlers->on_new_character) { object->handlers->on_new_character(object, c); }
+
+          if(object->end_of_line_character == c)
+          {
+            if(object->handlers->on_new_line) { object->handlers->on_new_line(object); }
+          }
+        }
+
+        saved = true;
+      }
+      else
+      {
+        if (object->handlers)
+        {
+          if(object->handlers->on_full) { object->handlers->on_full(object, c); }
+
+          if(object->handlers->on_wait_set)
+          {
+            if(object->handlers->on_wait_set(object))
+            {
+              break; // Function was canceled by the handler function
+            }
+          }
+        }
+
+        if(BUFFER_FLAGS_IDLE >= atomic_load(&object->state))
+        {
+          break; // Function was canceled by flag
+        }
+
+        continue; // The function waits until a character has been saved.
+      }
+
+      break; // Character has been saved and the function can be ended.
+    }
+  }
+
+  atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_SET);
+  return saved;
 }
 
 bool buffer_set_possible_or_skip(buffer_t * object, char c)
 {
-    if(NULL == object) { return false; }
+  if(NULL == object) { return false; }
 
-    bool saved = false;
+  bool saved = false;
 
-    if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_SET_POSSIBLE_OR_SKIP))
+  if(BUFFER_FLAGS_IDLE <= atomic_fetch_add(&object->state, BUFFER_FLAGS_RUNNING_SET_POSSIBLE_OR_SKIP))
+  {
+    // the get function can change the position but only to a smaller position the start position
+    if((char *)atomic_load(&object->producer_ptr) <= object->last)
     {
-        // the get function can change the position but only to a smaller position the start position
-        if((char *)atomic_load(&object->producer_ptr) <= object->last)
+      *(char *)atomic_fetch_add(&object->producer_ptr, 1) = c;
+
+      if (object->end_of_line_character == c)
+      {
+        atomic_fetch_add(&object->lines, 1);
+      }
+
+      atomic_fetch_add(&object->length, 1);
+
+      if (object->handlers)
+      {
+
+        if(object->handlers->on_new_character) { object->handlers->on_new_character(object, c); }
+
+        if(object->end_of_line_character == c)
         {
-            *(char *)atomic_fetch_add(&object->producer_ptr, 1) = c;
-
-            if (object->end_of_line_character == c)
-            {
-                atomic_fetch_add(&object->lines, 1);
-            }
-
-            atomic_fetch_add(&object->length, 1);
-
-#ifdef BUFFER_ENABLE_HANDLER
-
-            if(object->on_new_character) { object->on_new_character(object, c); }
-
-            if(object->end_of_line_character == c)
-            {
-                if(object->on_new_line) { object->on_new_line(object); }
-            }
-#endif
-
-            saved = true;
+          if(object->handlers->on_new_line) { object->handlers->on_new_line(object); }
         }
-        else
-        {
-#ifdef BUFFER_ENABLE_HANDLER
-            if(object->on_full) { object->on_full(object, c); }
-#endif
-        }
+      }
+
+      saved = true;
     }
+    else
+    {
+      if (object->handlers)
+      {
+        if(object->handlers->on_full) { object->handlers->on_full(object, c); }
+      }
+    }
+  }
 
-    atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_SET_POSSIBLE_OR_SKIP);
-    return saved;
+  atomic_fetch_sub(&object->state, BUFFER_FLAGS_RUNNING_SET_POSSIBLE_OR_SKIP);
+  return saved;
 }
 
 size_t buffer_space(const buffer_t * object)
@@ -635,64 +651,71 @@ size_t buffer_space(const buffer_t * object)
 
 bool buffer_start(buffer_t * object)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    if(NULL != object->data)
+  if(NULL != object->data)
+  {
+    atomic_fetch_or(&object->state, BUFFER_FLAGS_IDLE);
+
+    if (object->handlers)
     {
-        atomic_fetch_or(&object->state, BUFFER_FLAGS_IDLE);
-
-#ifdef BUFFER_ENABLE_HANDLER
-        if(object->on_start) { object->on_start(object); }
-#endif
-
-        return true;
+      if(object->handlers->on_start) { object->handlers->on_start(object); }
     }
-    return false;
+
+    return true;
+  }
+  return false;
 }
 
 bool buffer_stop_force(buffer_t * object)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    buffer_falgs_t state = (buffer_falgs_t)atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE);
+  buffer_falgs_t state = (buffer_falgs_t)atomic_fetch_and(&object->state, ~BUFFER_FLAGS_IDLE);
 
-    if(BUFFER_FLAGS_STOP == state)
+  if(BUFFER_FLAGS_STOP == state)
+  {
+
+    if (object->handlers)
     {
-#ifdef BUFFER_ENABLE_HANDLER
-        if(object->on_stop) { object->on_stop(object); }
-#endif
-
-        return true;
+      if(object->handlers->on_stop) { object->handlers->on_stop(object); }
     }
 
-    return false;
+    return true;
+  }
+
+  return false;
 }
 
 bool buffer_stop_try(buffer_t * object)
 {
-    if(NULL == object){ return false; }
+  if(NULL == object){ return false; }
 
-    buffer_falgs_t state = (buffer_falgs_t)atomic_load(&object->state);
-    if(BUFFER_FLAGS_STOP == state)
+  buffer_falgs_t state = (buffer_falgs_t)atomic_load(&object->state);
+  if(BUFFER_FLAGS_STOP == state)
+  {
+
+    if (object->handlers)
     {
-#ifdef BUFFER_ENABLE_HANDLER
-        if(object->on_stop) { object->on_stop(object); }
-#endif
-
-        return true;
+      if(object->handlers->on_stop) { object->handlers->on_stop(object); }
     }
-    if(BUFFER_FLAGS_IDLE == state)
+
+    return true;
+  }
+  if(BUFFER_FLAGS_IDLE == state)
+  {
+    if (atomic_compare_exchange_strong(&(object->state), (_Atomic(unsigned char) *)&state, BUFFER_FLAGS_STOP))
     {
-        if (atomic_compare_exchange_strong(&(object->state), (_Atomic(unsigned char) *)&state, BUFFER_FLAGS_STOP))
-        {
-#ifdef BUFFER_ENABLE_HANDLER
-            if(object->on_stop) { object->on_stop(object); }
-#endif
 
-            return true;
-        }
+      if (object->handlers)
+      {
+        if(object->handlers->on_stop) { object->handlers->on_stop(object); }
+      }
+
+      return true;
     }
-    return false;
+  }
+  return false;
 }
 
 size_t buffer_write(buffer_t * object, const char *src, size_t n)

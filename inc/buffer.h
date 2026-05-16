@@ -140,32 +140,6 @@ extern "C" {
 /*---------------------------------------------------------------------*
  *  public: define
  *---------------------------------------------------------------------*/
-
-//! @defgroup buffer_disable_handler Additional option to save storage space
-//!
-//! @details All handlers can be deactivated by setting the ::BUFFER_DISABLE_HANDLER define.
-//!
-//! - The define must be set for all files, otherwise not enough space is reserved during
-//!   use and problems occur when calling.
-//! - The ::BUFFER_ENABLE_HANDLER define can be set, but is the default option.
-//! - If both definitions are set, the handlers can be used, so the standard behavior wins.
-//!
-//! @{
-
-#ifndef BUFFER_DISABLE_HANDLER
-
-  #ifndef BUFFER_ENABLE_HANDLER
-
-    //! @brief See: \ref buffer_disable_handler
-    #define BUFFER_ENABLE_HANDLER
-
-  #endif
-
-#endif
-
-//! @}
-
-
 /*---------------------------------------------------------------------*
  *  public: typedefs
  *---------------------------------------------------------------------*/
@@ -176,6 +150,11 @@ struct buffer_s;
 //! @brief Forward typedef, for information see ::buffer_s
 typedef struct buffer_s buffer_t;
 
+//! @brief Forward declaration
+struct buffer_handler_s;
+
+//! @brief Forward typedef, for information see ::buffer_handler_s
+typedef struct buffer_handler_s buffer_handler_t;
 
 //! @brief Describes the status of the buffer
 //!
@@ -193,8 +172,6 @@ typedef enum buffer_flags_e
     BUFFER_FLAGS_IDLE = 0x10, ///< State and flag, if the value is greater than or equal to this, the object is active.
 }buffer_falgs_t;
 
-
-#ifdef BUFFER_ENABLE_HANDLER
 
 //! @brief Handler type of ::buffer_s
 //!
@@ -229,8 +206,81 @@ typedef void (*buffer_action_char_handler_t)(buffer_t * object, char c);
 typedef char (*buffer_function_char_handler_t)(buffer_t * object);
 
 
-#endif
+//! @brief Contains the handlers that are called
+struct buffer_handler_s
+{
+  //! @brief Start handler
+  //!
+  //! @details Handler that is called when the object is started, ::buffer_start().
+  //! - `NULL` is allowed.
+  buffer_action_handler_t on_start;
 
+  //! @brief Stop handler
+  //!
+  //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
+  //! - `NULL` is allowed.
+  buffer_action_handler_t on_stop;
+
+  //! @brief Full handler
+  //!
+  //! @details Handler that is called when you want to save a character but the buffer is full.
+  //! - `NULL` is allowed.
+  //! - The character that is NOT to be saved is passed
+  //! - Called from producer/set thread.
+  buffer_action_char_handler_t on_full;
+
+  //! @brief Empty handler
+  //!
+  //! @details Handler that is called when the buffer was reset.
+  //! - `NULL` is allowed.
+  //! - Called from consumer/get thread.
+  buffer_action_handler_t on_empty;
+
+  //! @brief New Character handler
+  //!
+  //! @details Handler that is called when a new character was save in the buffer.
+  //! - `NULL` is allowed.
+  //! - The character that is to be saved is passed
+  //! - Called from producer/set thread.
+  buffer_action_char_handler_t on_new_character;
+
+  //! @brief New Line handler
+  //!
+  //! @details Handler that is called when a new newline character was save in the buffer.
+  //! - `NULL` is allowed.
+  //! - Called from producer/set thread.
+  buffer_action_handler_t on_new_line;
+
+  //! @brief Error handler
+  //!
+  //! @details Handler that is called when a character is to be read because there are new characters,
+  //! but the read address is above the last element. This is an error that occurs due to
+  //! external manipulation.
+  //! - `NULL` is allowed.
+  //! - Called from consumer/get thread.
+  buffer_action_handler_t on_error;
+
+  //! @brief Set wait handler
+  //!
+  //! @details Handler that is called in each cycle when you use ::buffer_set()
+  //! while no space or no character is available.
+  //! - `NULL` is allowed.
+  //! - Any value other than 0 causes the wait loop to be exited
+  //! - Called from producer/set thread.
+  //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
+  buffer_function_char_handler_t on_wait_set;
+
+  //! @brief Get wait handler
+  //!
+  //! @details Handler that is called in each cycle when you use ::buffer_get()
+  //! while no space or no character is available.
+  //! - `NULL` is allowed.
+  //! - Any value other than 0 causes the wait loop to be exited
+  //! - Called from consumer/get thread.
+  //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
+  buffer_function_char_handler_t on_wait_get;
+
+};
 
 //! @brief Struct to create a buffer object, like an instance of a class
 //!
@@ -258,80 +308,9 @@ struct buffer_s {
     //! @details End of line character, standard is '\\n'
     char end_of_line_character;
 
-#ifdef BUFFER_ENABLE_HANDLER
-
-    //! @brief Start handler
+    //! @brief Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
     //!
-    //! @details Handler that is called when the object is started, ::buffer_start().
-    //! - `NULL` is allowed.
-    buffer_action_handler_t on_start;
-
-    //! @brief Stop handler
-    //!
-    //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
-    //! - `NULL` is allowed.
-    buffer_action_handler_t on_stop;
-
-    //! @brief Full handler
-    //!
-    //! @details Handler that is called when you want to save a character but the buffer is full.
-    //! - `NULL` is allowed.
-    //! - The character that is NOT to be saved is passed
-    //! - Called from producer/set thread.
-    buffer_action_char_handler_t on_full;
-
-    //! @brief Empty handler
-    //!
-    //! @details Handler that is called when the buffer was reset.
-    //! - `NULL` is allowed.
-    //! - Called from consumer/get thread.
-    buffer_action_handler_t on_empty;
-
-    //! @brief New Character handler
-    //!
-    //! @details Handler that is called when a new character was save in the buffer.
-    //! - `NULL` is allowed.
-    //! - The character that is to be saved is passed
-    //! - Called from producer/set thread.
-    buffer_action_char_handler_t on_new_character;
-
-    //! @brief New Line handler
-    //!
-    //! @details Handler that is called when a new newline character was save in the buffer.
-    //! - `NULL` is allowed.
-    //! - Called from producer/set thread.
-    buffer_action_handler_t on_new_line;
-
-    //! @brief Error handler
-    //!
-    //! @details Handler that is called when a character is to be read because there are new characters,
-    //! but the read address is above the last element. This is an error that occurs due to
-    //! external manipulation.
-    //! - `NULL` is allowed.
-    //! - Called from consumer/get thread.
-    buffer_action_handler_t on_error;
-
-    //! @brief Set wait handler
-    //!
-    //! @details Handler that is called in each cycle when you use ::buffer_set()
-    //! while no space or no character is available.
-    //! - `NULL` is allowed.
-    //! - Any value other than 0 causes the wait loop to be exited
-    //! - Called from producer/set thread.
-    //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t on_wait_set;
-
-    //! @brief Get wait handler
-    //!
-    //! @details Handler that is called in each cycle when you use ::buffer_get()
-    //! while no space or no character is available.
-    //! - `NULL` is allowed.
-    //! - Any value other than 0 causes the wait loop to be exited
-    //! - Called from consumer/get thread.
-    //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t on_wait_get;
-
-#endif
+    buffer_handler_t * handlers;
 
     //! @brief Consumer pointer
     //!
@@ -1113,7 +1092,7 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
  *  public: static inline functions
  *---------------------------------------------------------------------*/
 
-#ifdef BUFFER_ENABLE_HANDLER
+
 
 //! @brief Define statement for initializing a new structure
 //!
@@ -1125,45 +1104,14 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
     /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
     /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
     /* .end_of_line_character = */ '\n', \
-    /* .on_start              = */ (NULL), \
-    /* .on_stop               = */ (NULL), \
-    /* .on_full               = */ (NULL), \
-    /* .on_empty              = */ (NULL), \
-    /* .on_new_character      = */ (NULL), \
-    /* .on_new_line           = */ (NULL), \
-    /* .on_error              = */ (NULL), \
-    /* .on_wait_set           = */ (NULL), \
-    /* .on_wait_get           = */ (NULL), \
+    /* .handlers              = */ NULL, \
     /* .consumer_ptr          = */ (DATA), \
     /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
     /* .length                = */ ATOMIC_VAR_INIT(0), \
     /* .lines                 = */ ATOMIC_VAR_INIT(0), \
     /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
-    /* .user_data             = */ (NULL), \
+    /* .user_data             = */ NULL, \
 } //;
-
-
-#else
-
-//! @brief Define statement for initializing a new structure
-//!
-//! @param DATA Start address of the buffer
-//! @param DATA_LENGTH Length of the buffer
-//! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) \
-(buffer_t){ \
-    /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
-    /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
-    /* .end_of_line_character = */ '\n', \
-    /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
-    /* .user_data             = */ (NULL), \
-} //;
-
-#endif
 
 
 #ifdef __cplusplus
