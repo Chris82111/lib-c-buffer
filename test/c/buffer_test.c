@@ -51,36 +51,169 @@ static int buffer_test_get_over_last(void);
 
 static int buffer_test_init(void)
 {
-    int errors = 0;
+  int errors = 0;
 
-    char buf[4 + 1];
+  size_t sizeof_buf = 4;
 
-    buffer_t obj_1 = { 0 };
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
-    }
-    buffer_init(&obj_1, buf, sizeof(buf)-1, true);
+  // The additional element is necessary to detect an overflow
+  char buf[sizeof_buf + 1];
 
-    buffer_t obj_2 = BUFFER_INIT(buf, (sizeof(buf)-1), true);
+  buffer_t obj_1;
 
-    buffer_t * ptrs[] = { &obj_1, &obj_2, NULL };
 
-    buffer_t ref = { 0 };
-    ref.data = buf;
-    ref.last = buf + (sizeof(buf)-1) - 1;
-    ref.end_of_line_character = '\n';
-    ref.consumer_ptr = buf;
-    atomic_init(&ref.producer_ptr, buf);
-    atomic_init(&ref.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
+  // --- Test started
 
-    buffer_t * ptr;
-    for(size_t j = 0; j < LENGTH(ptrs) && NULL != (ptr = ptrs[j]); j++ )
-    {
-        if(true != buffer_equal(ptr, &ref)){ errors += 1; }
-    }
+  // Fill all memory space with 0xff
+  for(size_t i = 0; i < sizeof(buffer_t); i++)
+  {
+      *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
+  }
 
-    return errors;
+  buffer_init(&obj_1, NULL, buf, sizeof_buf, true);
+
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
+
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
+
+
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_IDLE != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+
+
+  // --- Test stopped
+
+  // Fill all memory space with 0xff
+  for(size_t i = 0; i < sizeof(buffer_t); i++)
+  {
+      *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
+  }
+
+  buffer_init(&obj_1, NULL, buf, sizeof_buf, false);
+
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
+
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
+
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_STOP != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+
+
+  // --- Test started
+
+  // Fill all memory space with 0xff
+  for(size_t i = 0; i < sizeof(buffer_t); i++)
+  {
+      *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
+  }
+
+  obj_1 = BUFFER_INIT(NULL, buf, sizeof_buf, true);
+
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
+
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
+
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_IDLE != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+
+
+
+  // --- Test stopped
+
+  // Fill all memory space with 0xff
+  for(size_t i = 0; i < sizeof(buffer_t); i++)
+  {
+      *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
+  }
+
+  obj_1 = BUFFER_INIT(NULL, buf, sizeof_buf, false);
+
+  if (buf != obj_1.data) { errors++; }
+  if ((buf + sizeof_buf - 1) != obj_1.last) { errors++; }
+  if ('\n'!= obj_1.end_of_line_character) { errors++; }
+
+  if(obj_1.handlers)
+  {
+    if (NULL != obj_1.handlers->on_start) { errors++; }
+    if (NULL != obj_1.handlers->on_stop) { errors++; }
+    if (NULL != obj_1.handlers->on_full) { errors++; }
+    if (NULL != obj_1.handlers->on_empty) { errors++; }
+    if (NULL != obj_1.handlers->on_new_character) { errors++; }
+    if (NULL != obj_1.handlers->on_new_line) { errors++; }
+    if (NULL != obj_1.handlers->on_error) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_set) { errors++; }
+    if (NULL != obj_1.handlers->on_wait_get) { errors++; }
+  }
+
+  if (buf != obj_1.consumer_ptr) { errors++; }
+
+  if (buf != atomic_load(&obj_1.producer_ptr)) { errors++; }
+  if (0 != atomic_load(&obj_1.length)) { errors++; }
+  if (0 != atomic_load(&obj_1.lines)) { errors++; }
+
+  if (BUFFER_FLAGS_STOP != atomic_load(&obj_1.state)) { errors++; }
+
+  if (NULL != obj_1.user_data) { errors++; }
+  return errors;
 }
 
 static int buffer_test_init_sizeof_data_zero(void)
@@ -90,38 +223,38 @@ static int buffer_test_init_sizeof_data_zero(void)
     char buf[4 + 1];
 
     buffer_t obj_1 = { 0 };
-    buffer_init(&obj_1, buf, 0, true);
+    buffer_init(&obj_1, NULL, buf, 0, true);
     if(0 != obj_1.state){ errors += 1; }
     if(NULL != obj_1.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_1.producer_ptr)){ errors += 1; }
 
     buffer_t obj_2 = { 0 };
-    buffer_init(&obj_2, NULL, sizeof(buf)-1, true);
+    buffer_init(&obj_2, NULL,  NULL, sizeof(buf)-1, true);
     if(0 != obj_2.state){ errors += 1; }
     if(NULL != obj_2.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_2.producer_ptr)){ errors += 1; }
 
     buffer_t obj_3 = { 0 };
-    buffer_init(&obj_3, NULL, 0, true);
+    buffer_init(&obj_3, NULL,  NULL, 0, true);
     if(0 != obj_3.state){ errors += 1; }
     if(NULL != obj_3.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_3.producer_ptr)){ errors += 1; }
 
 
-    buffer_t obj_4 = BUFFER_INIT(buf, 0, true);
-    buffer_init(&obj_4, NULL, 0, true);
+    buffer_t obj_4 = BUFFER_INIT(NULL, buf, 0, true);
+    buffer_init(&obj_4, NULL,  NULL, 0, true);
     if(0 != obj_4.state){ errors += 1; }
     if(NULL != obj_4.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_4.producer_ptr)){ errors += 1; }
 
-    buffer_t obj_5 = BUFFER_INIT(NULL, sizeof(buf)-1, true);
-    buffer_init(&obj_5, NULL, 0, true);
+    buffer_t obj_5 = BUFFER_INIT(NULL, NULL, sizeof(buf)-1, true);
+    buffer_init(&obj_5, NULL,  NULL, 0, true);
     if(0 != obj_5.state){ errors += 1; }
     if(NULL != obj_5.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_5.producer_ptr)){ errors += 1; }
 
-    buffer_t obj_6 = BUFFER_INIT(NULL, 0, true);
-    buffer_init(&obj_6, NULL, 0, true);
+    buffer_t obj_6 = BUFFER_INIT(NULL, NULL, 0, true);
+    buffer_init(&obj_6, NULL,  NULL, 0, true);
     if(0 != obj_6.state){ errors += 1; }
     if(NULL != obj_6.consumer_ptr){ errors += 1; }
     if(NULL != atomic_load(&obj_6.producer_ptr)){ errors += 1; }
@@ -131,61 +264,53 @@ static int buffer_test_init_sizeof_data_zero(void)
 
 static int buffer_test_reset(void)
 {
-    int errors = 0;
+  int errors = 0;
 
-    char buf[4 + 1];
+  size_t sizeof_buf = 4;
 
-
-    buffer_t obj = {0};
-    buffer_t * ptr = &obj;
-
-    buffer_init(ptr, buf, sizeof(buf)-1, true);
-
-    buffer_set_possible_or_skip(&obj, '1');
-    buffer_set_possible_or_skip(&obj, '2');
-
-    buffer_reset(ptr, true);
-
-    buffer_t ref = { 0 };
-    ref.data = buf;
-    ref.last = buf + (sizeof(buf)-1) - 1;
-    ref.end_of_line_character = '\n';
-    ref.consumer_ptr = buf;
-    atomic_init(&ref.producer_ptr, buf);
-    atomic_init(&ref.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
-
-    if(true != buffer_equal(ptr, &ref)){ errors += 1; }
+  // The additional element is necessary to detect an overflow
+  char buf[sizeof_buf + 1];
 
 
-    return errors;
-}
+  buffer_t obj = {0};
+  buffer_t * ptr = &obj;
 
-static int buffer_test_copy(void)
-{
-    int errors = 0;
+  buffer_init(ptr, NULL,  buf, sizeof_buf, true);
 
-    char buf[4 + 1];
-    buffer_t obj_1 = {0};
+  buffer_set_possible_or_skip(&obj, '1');
+  buffer_set_possible_or_skip(&obj, '2');
 
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_1) ) + i) = 0xff;
-    }
+  buffer_reset(ptr, true);
 
-    buffer_init(&obj_1, buf, sizeof(buf)-1, true);
 
-    buffer_t obj_2 = {0};
+  if (buf != ptr->data) { errors++; }
+  if ((buf + sizeof_buf - 1) != ptr->last) { errors++; }
+  if ('\n'!= ptr->end_of_line_character) { errors++; }
 
-    for(size_t i = 0; i < sizeof(buffer_t); i++)
-    {
-        *(( (uint8_t *)(&obj_2) ) + i) = 0xff;
-    }
+  if(ptr->handlers)
+  {
+    if (NULL != ptr->handlers->on_start) { errors++; }
+    if (NULL != ptr->handlers->on_stop) { errors++; }
+    if (NULL != ptr->handlers->on_full) { errors++; }
+    if (NULL != ptr->handlers->on_empty) { errors++; }
+    if (NULL != ptr->handlers->on_new_character) { errors++; }
+    if (NULL != ptr->handlers->on_new_line) { errors++; }
+    if (NULL != ptr->handlers->on_error) { errors++; }
+    if (NULL != ptr->handlers->on_wait_set) { errors++; }
+    if (NULL != ptr->handlers->on_wait_get) { errors++; }
+  }
 
-    buffer_copy(&obj_1, &obj_2);
+  if (buf != ptr->consumer_ptr) { errors++; }
 
-    if(true != buffer_equal(&obj_1, &obj_2)){ errors += 1; }
+  if (buf != atomic_load(&ptr->producer_ptr)) { errors++; }
+  if (0 != atomic_load(&ptr->length)) { errors++; }
+  if (0 != atomic_load(&ptr->lines)) { errors++; }
 
-    return errors;
+  if (BUFFER_FLAGS_IDLE != atomic_load(&ptr->state)) { errors++; }
+
+  if (NULL != ptr->user_data) { errors++; }
+
+  return errors;
 }
 
 static int buffer_test_set_get_non_blocking(void)
@@ -449,6 +574,9 @@ static int buffer_test_set_get_blocking(void)
     atomic_init(&obj.producer_ptr, buf);
     atomic_init(&obj.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
 
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
 
 
     bool atomic = atomic_is_lock_free(&(obj.length));
@@ -521,7 +649,7 @@ static int buffer_test_set_get_blocking(void)
     if('9' != buf[9] ){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_set = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_set = buffer_test_set_get_blocking_wait;
 
     saved = buffer_set(&obj, '0');
     if(false != saved){ errors += 1; }
@@ -530,7 +658,7 @@ static int buffer_test_set_get_blocking(void)
     if('\0' != buf[10] ){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
 
 
 
@@ -585,7 +713,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_get = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     length = buffer_length(ptr);
@@ -593,7 +721,7 @@ static int buffer_test_set_get_blocking(void)
     if(0 != length){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_get = NULL;
+    obj.handlers->on_wait_get = NULL;
 
 
 
@@ -945,6 +1073,9 @@ static int buffer_test_get_over_last(void)
     atomic_init(&obj.producer_ptr, buf);
     atomic_init(&obj.state, (true) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP );
 
+    buffer_handler_t handlers = { 0 };
+    obj.handlers = &handlers;
+
     buffer_set_possible_or_skip(&obj, '1');
     buffer_set_possible_or_skip(&obj, '2');
     buffer_set_possible_or_skip(&obj, '3');
@@ -960,13 +1091,13 @@ static int buffer_test_get_over_last(void)
 
 
     buffer_test_set_get_blocking_wait_counter = 0;
-    obj.on_wait_get = buffer_test_set_get_blocking_wait;
+    obj.handlers->on_wait_get = buffer_test_set_get_blocking_wait;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
 
     return errors;
 }
@@ -978,7 +1109,7 @@ static int buffer_test_stop(void)
 
     char buf[6 + 1];
     buffer_t obj = {0};
-    buffer_init(NULL, buf, sizeof(buf)-1, false);
+    buffer_init(NULL,  NULL, buf, sizeof(buf)-1, false);
 
     atomic_store(&obj.state, (unsigned char)BUFFER_FLAGS_STOP);
     result = buffer_stop_try(&obj);
@@ -1156,8 +1287,10 @@ static int buffer_test_get_set_wait_force_stop(void)
     int errors = 0;
 
     char buf[2+1] = { 0 };
-    buffer_t obj = BUFFER_INIT(buf, sizeof(buf)-1, true);
-    obj.on_wait_set = buffer_test_get_set_wait_force_stop_wait;
+    buffer_handler_t handlers = { 0 };
+    buffer_t obj = BUFFER_INIT(&handlers, buf, sizeof(buf)-1, true);
+
+    obj.handlers->on_wait_set = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     buffer_set(&obj, '1');
@@ -1174,12 +1307,12 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != buf[2]){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
     buffer_start(&obj);
 
 
 
-    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.handlers->on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
     c = buffer_get(&obj);
     if('1' != c){ errors += 1; }
@@ -1189,7 +1322,7 @@ static int buffer_test_get_set_wait_force_stop(void)
     if('\0' != c){ errors += 1; }
 
     if(10 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_get = NULL;
+    obj.handlers->on_wait_get = NULL;
     buffer_start(&obj);
 
 
@@ -1206,14 +1339,14 @@ static int buffer_test_get_set_wait_force_stop(void)
     c = buffer_get_available_or_null(&obj);
     if('\0' != c ){ errors += 1; }
 
-    obj.on_wait_get = buffer_test_get_set_wait_force_stop_wait;
+    obj.handlers->on_wait_get = buffer_test_get_set_wait_force_stop_wait;
     buffer_test_set_get_blocking_wait_counter = 0;
 
     c = buffer_get(&obj);
     if('\0' != c ){ errors += 1; }
 
     if(0 != buffer_test_set_get_blocking_wait_counter ){ errors += 1; }
-    obj.on_wait_set = NULL;
+    obj.handlers->on_wait_set = NULL;
     buffer_start(&obj);
 
     return errors;
@@ -1232,7 +1365,7 @@ static int buffer_test_buffer_write(void)
     ref10[19] = '-';
 
 
-    buffer_t o20 = BUFFER_INIT(buf_set, sizeof(buf_set), true);
+    buffer_t o20 = BUFFER_INIT(NULL, buf_set, sizeof(buf_set), true);
 
     size_t length_too_long = 15;
     if(true != buffer_clear(&o20)){ errors += 1; }
@@ -1291,7 +1424,7 @@ static int buffer_test_buffer_read(void)
 
     size_t size;
 
-    buffer_t obj = BUFFER_INIT(buf_set, sizeof(buf_set), true);
+    buffer_t obj = BUFFER_INIT(NULL, buf_set, sizeof(buf_set), true);
 
     size_t length_too_long = 15;
     for(size_t i = 0; i < sizeof(buf_set); i++){ buf_set[i] = '+'; }
@@ -1387,7 +1520,7 @@ static int buffer_test_buffer_read_line(void)
 
 
 
-    buffer_t obj = BUFFER_INIT(buf_set, sizeof(buf_set), true);
+    buffer_t obj = BUFFER_INIT(NULL, buf_set, sizeof(buf_set), true);
 
     for(size_t i = 0; i < sizeof(buf_set); i++){ buf_set[i] = '+'; }
     if(true != buffer_clear(&obj)){ errors += 1; }
@@ -1448,7 +1581,7 @@ static int buffer_test_buffer_read_to(void)
     char ref_full [30] = { "eoteot\0--" "----------" "----------" }; ref_full[29] = '-';
     size_t size;
 
-    buffer_t obj = BUFFER_INIT(buf_set, sizeof(buf_set), true);
+    buffer_t obj = BUFFER_INIT(NULL, buf_set, sizeof(buf_set), true);
 
     size = buffer_read_to(&obj, buf_get, sizeof(buf_get), "eot\n", 4);
     if(0 != size ){ errors += 1; }
@@ -1523,123 +1656,6 @@ static int buffer_test_buffer_read_to(void)
     return errors;
 }
 
-static int buffer_test_buffer_object_allocate_free(void)
-{
-    int errors = 0;
-
-    char buf[10];
-    char c;
-    buffer_t * p = buffer_object_allocate(NULL, 0, true);
-    if(true != buffer_is_stopped(p) ){ errors += 1; }
-    if(NULL != p)
-    {
-        buffer_start(p);
-        if(true != buffer_is_stopped(p) ){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('\0' == c){ c = '\0'; }
-        c = buffer_get_available_or_null(p);
-        if('\0' != c ){ errors += 1; }
-        if(0 != buffer_length(p) ){ errors += 1; }
-        buffer_set_possible_or_skip(p, 'A');
-        if(0 != buffer_length(p) ){ errors += 1; }
-        buffer_set_possible_or_skip(p, 'B');
-        if(0 != buffer_length(p) ){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('\0' != c ){ errors += 1; }
-        if(0 != buffer_length(p) ){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('\0' != c ){ errors += 1; }
-        if(0 != buffer_length(p) ){ errors += 1; }
-
-        buffer_init(p, buf, sizeof(buf), true);
-        if(false != buffer_is_stopped(p) ){ errors += 1; }
-        buffer_start(p);
-        if(false != buffer_is_stopped(p) ){ errors += 1; }
-
-        c = buffer_get_available_or_null(p);
-        if('\0' == c){ c = '\0'; }
-        c = buffer_get_available_or_null(p);
-        if('\0' == c){ c = '\0'; }
-        buffer_set_possible_or_skip(p, 'A');
-        if(1 != buffer_length(p) ){ errors += 1; }
-        buffer_set_possible_or_skip(p, 'B');
-        if(2 != buffer_length(p) ){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('A' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('B' != c){ errors += 1; }
-
-        buffer_object_free(p);
-    }
-    else
-    {
-        errors += 1;
-    }
-    return errors;
-}
-
-static int buffer_test_buffer_object_allocate_null_free(void)
-{
-    int errors = 0;
-
-    char c;
-    buffer_t * p = buffer_object_allocate(NULL, 10, true);
-    if(false != buffer_is_stopped(p) ){ errors += 1; }
-    if(NULL != p)
-    {
-        c = buffer_get_available_or_null(p);
-        if('\0' == c){ c = '\0'; }
-        c = buffer_get_available_or_null(p);
-        if('\0' == c){ c = '\0'; }
-        buffer_set_possible_or_skip(p, '1');
-        if(1 != buffer_length(p) ){ errors += 1; }
-        buffer_set_possible_or_skip(p, '2');
-        buffer_set_possible_or_skip(p, '3');
-        buffer_set_possible_or_skip(p, '4');
-        buffer_set_possible_or_skip(p, '5');
-        buffer_set_possible_or_skip(p, '6');
-        buffer_set_possible_or_skip(p, '7');
-        buffer_set_possible_or_skip(p, '8');
-        buffer_set_possible_or_skip(p, '9');
-        buffer_set_possible_or_skip(p, 'A');
-        buffer_set_possible_or_skip(p, 'B');
-        buffer_set_possible_or_skip(p, 'C');
-        buffer_set_possible_or_skip(p, 'D');
-        buffer_set_possible_or_skip(p, 'E');
-        buffer_set_possible_or_skip(p, 'F');
-
-        c = buffer_get_available_or_null(p);
-        if('1' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('2' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('3' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('4' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('5' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('6' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('7' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('8' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('9' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('A' != c){ errors += 1; }
-        c = buffer_get_available_or_null(p);
-        if('\0' != c){ errors += 1; }
-
-        buffer_object_free(p);
-    }
-    else
-    {
-        errors += 1;
-    }
-    return errors;
-}
-
 static void buffer_run_example_handler(buffer_t * object)
 {
     char buf[10];
@@ -1654,28 +1670,17 @@ static void buffer_run_example_1(void)
 {
     char buf[10];
     buffer_t obj;
+    buffer_handler_t handlers = { 0 };
+    buffer.Init(&obj, &handlers, buf, sizeof(buf), true);
 
-    buffer.Init(&obj, buf, sizeof(buf), true);
-    obj.on_new_line = buffer_run_example_handler;
+    obj.handlers->on_new_line = buffer_run_example_handler;
 
     buffer.Write(&obj, "Hi you", 2);
     buffer.Set(&obj, '\n');
 }
 
-static void buffer_run_example_2(void)
-{
-    buffer_t * p = buffer.ObjectAllocate(NULL, 10, true);
-    if(NULL != p)
-    {
-        p->on_new_line = buffer_run_example_handler;
-        buffer.Write(p, "Hi you", 2);
-        buffer.Set(p, '\n');
-    }
-    buffer.ObjectFree(p);
-}
-
 static char uart_buf[10];
-static buffer_t uart = BUFFER_INIT(uart_buf, sizeof(uart_buf), false);
+static buffer_t uart = BUFFER_INIT(NULL, uart_buf, sizeof(uart_buf), false);
 
 static void buffer_run_example_3_init(void)
 {
@@ -1716,7 +1721,6 @@ int buffer_test(void)
     errors += buffer_test_init();
     errors += buffer_test_init_sizeof_data_zero();
     errors += buffer_test_reset();
-    errors += buffer_test_copy();
     errors += buffer_test_set_get_non_blocking();
     errors += buffer_test_set_get_blocking();
     errors += buffer_test_look();
@@ -1731,11 +1735,8 @@ int buffer_test(void)
     errors += buffer_test_buffer_read();
     errors += buffer_test_buffer_read_line();
     errors += buffer_test_buffer_read_to();
-    errors += buffer_test_buffer_object_allocate_free();
-    errors += buffer_test_buffer_object_allocate_null_free();
 
     buffer_run_example_1();
-    buffer_run_example_2();
     buffer_run_example_3_init();
     buffer_run_example_3_receive();
     buffer_run_example_3_main_loop();

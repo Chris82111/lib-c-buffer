@@ -140,32 +140,6 @@ extern "C" {
 /*---------------------------------------------------------------------*
  *  public: define
  *---------------------------------------------------------------------*/
-
-//! @defgroup buffer_disable_handler Additional option to save storage space
-//!
-//! @details All handlers can be deactivated by setting the ::BUFFER_DISABLE_HANDLER define.
-//!
-//! - The define must be set for all files, otherwise not enough space is reserved during
-//!   use and problems occur when calling.
-//! - The ::BUFFER_ENABLE_HANDLER define can be set, but is the default option.
-//! - If both definitions are set, the handlers can be used, so the standard behavior wins.
-//!
-//! @{
-
-#ifndef BUFFER_DISABLE_HANDLER
-
-  #ifndef BUFFER_ENABLE_HANDLER
-
-    //! @brief See: \ref buffer_disable_handler
-    #define BUFFER_ENABLE_HANDLER
-
-  #endif
-
-#endif
-
-//! @}
-
-
 /*---------------------------------------------------------------------*
  *  public: typedefs
  *---------------------------------------------------------------------*/
@@ -176,6 +150,11 @@ struct buffer_s;
 //! @brief Forward typedef, for information see ::buffer_s
 typedef struct buffer_s buffer_t;
 
+//! @brief Forward declaration
+struct buffer_handler_s;
+
+//! @brief Forward typedef, for information see ::buffer_handler_s
+typedef struct buffer_handler_s buffer_handler_t;
 
 //! @brief Describes the status of the buffer
 //!
@@ -193,8 +172,6 @@ typedef enum buffer_flags_e
     BUFFER_FLAGS_IDLE = 0x10, ///< State and flag, if the value is greater than or equal to this, the object is active.
 }buffer_falgs_t;
 
-
-#ifdef BUFFER_ENABLE_HANDLER
 
 //! @brief Handler type of ::buffer_s
 //!
@@ -229,8 +206,81 @@ typedef void (*buffer_action_char_handler_t)(buffer_t * object, char c);
 typedef char (*buffer_function_char_handler_t)(buffer_t * object);
 
 
-#endif
+//! @brief Contains the handlers that are called
+struct buffer_handler_s
+{
+  //! @brief Start handler
+  //!
+  //! @details Handler that is called when the object is started, ::buffer_start().
+  //! - `NULL` is allowed.
+  buffer_action_handler_t on_start;
 
+  //! @brief Stop handler
+  //!
+  //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
+  //! - `NULL` is allowed.
+  buffer_action_handler_t on_stop;
+
+  //! @brief Full handler
+  //!
+  //! @details Handler that is called when you want to save a character but the buffer is full.
+  //! - `NULL` is allowed.
+  //! - The character that is NOT to be saved is passed
+  //! - Called from producer/set thread.
+  buffer_action_char_handler_t on_full;
+
+  //! @brief Empty handler
+  //!
+  //! @details Handler that is called when the buffer was reset.
+  //! - `NULL` is allowed.
+  //! - Called from consumer/get thread.
+  buffer_action_handler_t on_empty;
+
+  //! @brief New Character handler
+  //!
+  //! @details Handler that is called when a new character was save in the buffer.
+  //! - `NULL` is allowed.
+  //! - The character that is to be saved is passed
+  //! - Called from producer/set thread.
+  buffer_action_char_handler_t on_new_character;
+
+  //! @brief New Line handler
+  //!
+  //! @details Handler that is called when a new newline character was save in the buffer.
+  //! - `NULL` is allowed.
+  //! - Called from producer/set thread.
+  buffer_action_handler_t on_new_line;
+
+  //! @brief Error handler
+  //!
+  //! @details Handler that is called when a character is to be read because there are new characters,
+  //! but the read address is above the last element. This is an error that occurs due to
+  //! external manipulation.
+  //! - `NULL` is allowed.
+  //! - Called from consumer/get thread.
+  buffer_action_handler_t on_error;
+
+  //! @brief Set wait handler
+  //!
+  //! @details Handler that is called in each cycle when you use ::buffer_set()
+  //! while no space or no character is available.
+  //! - `NULL` is allowed.
+  //! - Any value other than 0 causes the wait loop to be exited
+  //! - Called from producer/set thread.
+  //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
+  buffer_function_char_handler_t on_wait_set;
+
+  //! @brief Get wait handler
+  //!
+  //! @details Handler that is called in each cycle when you use ::buffer_get()
+  //! while no space or no character is available.
+  //! - `NULL` is allowed.
+  //! - Any value other than 0 causes the wait loop to be exited
+  //! - Called from consumer/get thread.
+  //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
+  buffer_function_char_handler_t on_wait_get;
+
+};
 
 //! @brief Struct to create a buffer object, like an instance of a class
 //!
@@ -258,80 +308,9 @@ struct buffer_s {
     //! @details End of line character, standard is '\\n'
     char end_of_line_character;
 
-#ifdef BUFFER_ENABLE_HANDLER
-
-    //! @brief Start handler
+    //! @brief Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
     //!
-    //! @details Handler that is called when the object is started, ::buffer_start().
-    //! - `NULL` is allowed.
-    buffer_action_handler_t on_start;
-
-    //! @brief Stop handler
-    //!
-    //! @details Handler that is called when the object is stopped, ::buffer_stop_force(), and ::buffer_stop_try()
-    //! - `NULL` is allowed.
-    buffer_action_handler_t on_stop;
-
-    //! @brief Full handler
-    //!
-    //! @details Handler that is called when you want to save a character but the buffer is full.
-    //! - `NULL` is allowed.
-    //! - The character that is NOT to be saved is passed
-    //! - Called from producer/set thread.
-    buffer_action_char_handler_t on_full;
-
-    //! @brief Empty handler
-    //!
-    //! @details Handler that is called when the buffer was reset.
-    //! - `NULL` is allowed.
-    //! - Called from consumer/get thread.
-    buffer_action_handler_t on_empty;
-
-    //! @brief New Character handler
-    //!
-    //! @details Handler that is called when a new character was save in the buffer.
-    //! - `NULL` is allowed.
-    //! - The character that is to be saved is passed
-    //! - Called from producer/set thread.
-    buffer_action_char_handler_t on_new_character;
-
-    //! @brief New Line handler
-    //!
-    //! @details Handler that is called when a new newline character was save in the buffer.
-    //! - `NULL` is allowed.
-    //! - Called from producer/set thread.
-    buffer_action_handler_t on_new_line;
-
-    //! @brief Error handler
-    //!
-    //! @details Handler that is called when a character is to be read because there are new characters,
-    //! but the read address is above the last element. This is an error that occurs due to
-    //! external manipulation.
-    //! - `NULL` is allowed.
-    //! - Called from consumer/get thread.
-    buffer_action_handler_t on_error;
-
-    //! @brief Set wait handler
-    //!
-    //! @details Handler that is called in each cycle when you use ::buffer_set()
-    //! while no space or no character is available.
-    //! - `NULL` is allowed.
-    //! - Any value other than 0 causes the wait loop to be exited
-    //! - Called from producer/set thread.
-    //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t on_wait_set;
-
-    //! @brief Get wait handler
-    //!
-    //! @details Handler that is called in each cycle when you use ::buffer_get()
-    //! while no space or no character is available.
-    //! - `NULL` is allowed.
-    //! - Any value other than 0 causes the wait loop to be exited
-    //! - Called from consumer/get thread.
-    //! - Function must not block or must itself monitor ::buffer_s::state and react to a forced stop.
-    buffer_function_char_handler_t on_wait_get;
-
-#endif
+    buffer_handler_t * handlers;
 
     //! @brief Consumer pointer
     //!
@@ -377,31 +356,332 @@ struct buffer_s {
 //! functions with auto-completion.
 struct buffer_sc
 {
-    bool       (* Clear    ) (      buffer_t * object);     ///< @brief See ::buffer_clear()
-    void       (* Copy     ) (const buffer_t * object, buffer_t * dest);          ///< @brief See ::buffer_copy()
-    bool       (* Equal    ) (const buffer_t * object, const buffer_t * object2); ///< @brief See ::buffer_equal()
-    char       (* Get      ) (      buffer_t * object);     ///< @brief See ::buffer_get()
-    char       (* GetAvailableOrNull ) (buffer_t * object); ///< @brief See ::buffer_get_available_or_null()
-    bool       (* Init     ) (      buffer_t * object, char * data, size_t sizeof_data, bool start); ///< @brief See ::buffer_init()
-    bool       (* IsEmpty  ) (const buffer_t * object);     ///< @brief See ::buffer_is_empty()
-    bool       (* IsFull   ) (const buffer_t * object);     ///< @brief See ::buffer_is_full()
-    bool       (* IsStopped) (const buffer_t * object);     ///< @brief See ::buffer_is_stoped()
-    size_t     (* Length   ) (const buffer_t * object);     ///< @brief See ::buffer_length()
-    size_t     (* Lines    ) (const buffer_t * object);     ///< @brief See ::buffer_lines()
-    char       (* LookAvailableOrNull) (buffer_t * object); ///< @brief See ::buffer_look_available_or_null()
-    buffer_t * (* ObjectAllocate) (char * data, size_t sizeof_data, bool start); ///< @brief See ::buffer_object_allocate()
-    bool       (* ObjectFree)(buffer_t * object);           ///< @brief See ::buffer_object_free()
-    size_t     (* Read     ) (      buffer_t * object, char * dest, size_t n); ///< @brief See ::buffer_read()
-    size_t     (* ReadLine ) (      buffer_t * object, char * dest, size_t n); ///< @brief See ::buffer_read_line()
-    size_t     (* ReadTo   ) (      buffer_t * object, char * dest, size_t n, const char * to, size_t to_length); ///< @brief See ::buffer_read_to()
-    bool       (* Reset    ) (      buffer_t * object, bool start); ///< @brief See ::buffer_reset()
-    bool       (* Set      ) (      buffer_t * object, char c);     ///< @brief See ::buffer_set()
-    bool       (* SetPossibleOrSkip  ) (buffer_t * object, char c); ///< @brief See ::buffer_set_possible_or_skip()
-    size_t     (* Space    ) (const buffer_t * object); ///< @brief See ::buffer_space()
-    bool       (* Start    ) (      buffer_t * object); ///< @brief See ::buffer_start()
-    bool       (* StopForce) (      buffer_t * object); ///< @brief See ::buffer_stop_force()
-    bool       (* StopTry  ) (      buffer_t * object); ///< @brief See ::buffer_stop_try()
-    size_t     (* Write    ) (      buffer_t * object, const char *src, size_t n); ///< @brief See ::buffer_write()
+  //! @brief Tries to clear the buffer
+  //!
+  //! @details Attempts to clear the buffer, fails if the buffer was written
+  //! to during the time to reset the buffer.
+  //!
+  //! However, the buffer does not have to be stopped for this.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns whether the buffer could be clear
+  //! @retval false Buffer could not be clear
+  //! @retval true  Buffer could be clear
+  bool (* Clear) (buffer_t * object);
+
+  //! @brief Reads a character or waits until it can be executed.
+  //!
+  //! @details Reads a character in the buffer, blocks as long as the character can be read
+  //!
+  //! Can be use in:
+  //! - consumer/get thread
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return The read character
+  char (* Get) (buffer_t * object);
+
+  //! @brief Reads a character or skips it if this is not possible
+  //!
+  //! @details Tries to read a character or skips it if this is not possible
+  //!
+  //! Can be use in:
+  //! - consumer/get thread
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns the character or null
+  //! @retval 0 Returns a binary null, or ('\\0') if nothing is available
+  //! @retval else The read character
+  char (* GetAvailableOrNull) (buffer_t * object);
+
+  //! @brief Function for initialization
+  //!
+  //! @details Function for initialization the buffer object. First, the buffer is
+  //! switched off with the function ::buffer_stop_force() whose return value is returned.
+  //!
+  //! Can be use in:
+  //! - producer/set thread, with stopped buffer
+  //! - consumer/get thread, with stopped buffer
+  //!
+  //! @attention Must not be used if one of the threads is used. Stop the buffer with
+  //! ::buffer_stop_force() or ::buffer_stop_try() and check the return value or call
+  //! ::buffer_is_stoped() to check if the buffer could be stopped.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param[in,out] handlers Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
+  //! @param data The `char` array which stores the data
+  //! @param sizeof_data Length of the `char` array in which the data is stored. `sizeof()` can be used if it is an array whose size is known at compile time.
+  //! @param start Starting or stopping the buffer, if parameter @p data is NULL, the buffer cannot be started.
+  //! @return Returns whether the buffer could be stopped without problems.
+  //! @retval true The buffer was successfully stopped.
+  //! @retval false The buffer could not be stopped.
+  bool (* Init) (buffer_t * object, buffer_handler_t * handlers, char * data, size_t sizeof_data, bool start);
+
+  //! @brief Checks if the buffer is empty
+  //!
+  //! @details Function to check if the buffer is empty
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Returns if the buffer is empty
+  //! @retval true The buffer is empty
+  //! @retval false The buffer is NOT empty
+  bool (* IsEmpty) (const buffer_t * object);
+
+  //! @brief Checks if the buffer is full
+  //!
+  //! @details Function to check if the buffer is full
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Returns if the buffer is full
+  //! @retval true The buffer is full
+  //! @retval false The buffer is NOT full
+  bool (* IsFull) (const buffer_t * object);
+
+  //! @brief Checks whether the buffer is stopped
+  //!
+  //! @details Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Returns whether the buffer could be stopped without problems.
+  //! @retval true The buffer is stopped.
+  //! @retval false The buffer is started (running or idle).
+  bool (* IsStopped) (const buffer_t * object);
+
+  //! @brief Returns the characters currently used
+  //!
+  //! @details Returns the currently used characters in the array
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Positive number of used characters
+  size_t (* Length) (const buffer_t * object);
+
+  //! @brief Returns the lines currently used
+  //!
+  //! @details Returns the currently used lines in the array.
+  //! The recognized character is defined in `buffer_s::end_of_line_character`.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Positive number of used characters
+  size_t (* Lines) (const buffer_t * object);
+
+  //! @brief Reads the next character in the buffer without deleting it
+  //!
+  //! @details Reads the next available character in the buffer without deleting it.
+  //! If the buffer is empty, null is returned.
+  //!
+  //! Can be use in:
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns the character or null
+  //! @retval 0 Returns a binary null, or ('\\0') if nothing is available
+  //! @retval else The read character
+  char (* LookAvailableOrNull) (buffer_t * object);
+
+  //! @brief Reads a string from the buffer
+  //!
+  //! @details Reads a string from the buffer,
+  //! a string terminating character '\\0' is always written at the end.
+  //! It is therefore the same as c_stc in C++.
+  //! This means that one character less is read than is specified in parameter @p n.
+  //!
+  //! Does not block and does not guarantee a read. The return value must
+  //! be checked to ensure that everything has been read.
+  //!
+  //! Can be use in:
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param[out] dest The string is written in this buffer.
+  //! @param n The length of the buffer (@p dest parameter)
+  //! including the string terminator character '\\0'
+  //! @return Returns the number of characters read
+  size_t (* Read) (buffer_t * object, char * dest, size_t n);
+
+  //! @brief Reads a line from the buffer
+  //!
+  //! @details Reads a string from the buffer,
+  //! a string terminating character '\\0' is always written at the end.
+  //! It is therefore the same as c_stc in C++.
+  //! This means that one character less is read than is specified in parameter @p n.
+  //!
+  //! Does not block and does not guarantee a read. The return value must
+  //! be checked to ensure that everything has been read.
+  //!
+  //! Can be use in:
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param[out] dest The string/line is written in this buffer.
+  //! @param n The length of the buffer (@p dest parameter)
+  //! including the string terminator character '\\0'
+  //! @return Returns the number of characters read
+  size_t (* ReadLine) (buffer_t * object, char * dest, size_t n);
+
+  //! @brief Reads the characters if the character string of the parameter @p to is contained
+  //! @details Then only returns the characters up to the string parameter @p to.
+  //!
+  //! Does not block and does not guarantee a read. The return value must
+  //! be checked to ensure that everything has been read.
+  //! The string terminating character '\\0' is always written at the end.
+  //! It is therefore the same as c_stc in C++.
+  //!
+  //! Can be use in:
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param[out] dest The string is written in this buffer.
+  //! @param n The length of the buffer (@p dest parameter)
+  //! including the string terminator character '\\0'
+  //! @param to The string up to which is read
+  //! @param to_length The number of characters without string terminator
+  //! '\\0', ::strlen() can be used from parameter @p to
+  //! @return Returns the number of characters read
+  size_t (* ReadTo) (buffer_t * object, char * dest, size_t n, const char * to, size_t to_length);
+
+  //! @brief Function to reset
+  //!
+  //! @details Function for reset the buffer object. First, the buffer is
+  //! switched off with the function ::buffer_stop_force() whose return value is returned.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @attention Must not be used if one of the threads is used. Stop the buffer with
+  //! ::buffer_stop_force() or ::buffer_stop_try() and check the return value or call
+  //! ::buffer_is_stoped() to check if the buffer could be stopped.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param start Starting or stopping the buffer
+  //! @return Returns whether the buffer could be stopped without problems.
+  //! @retval true The buffer was successfully stopped.
+  //! @retval false The buffer could not be stopped.
+  bool (* Reset) (buffer_t * object, bool start);
+
+  //! @brief Saves a character or waits until it can be executed
+  //!
+  //! @details Stores a character in the buffer, blocks as long as the character can be stored
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param c The character that will be stored
+  //! @return Returns whether the character could be saved
+  //! @retval false Character could not be saved
+  //! @retval true  Character could be saved
+  bool (* Set) (buffer_t * object, char c);
+
+  //! @brief Saves a character or skips it if this is not possible
+  //!
+  //! @details Tries to save a character or skips it if this is not possible
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param c The character that will be stored
+  //! @return Returns whether the character could be saved
+  //! @retval false Character could not be saved
+  //! @retval true  Character could be saved
+  bool (* SetPossibleOrSkip) (buffer_t * object, char c);
+
+  //! @brief Returns the free space
+  //!
+  //! @details Returns the available space in the array.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in] object The buffer object
+  //! @return Positive number of available space
+  size_t (* Space) (const buffer_t * object);
+
+  //! @brief Starts the buffer
+  //!
+  //! @details Starts the buffer or releases the execution of the functions.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns whether the buffer could be started without problems.
+  //! @retval true The buffer was successfully started.
+  //! @retval false The buffer could not be started.
+  bool (* Start) (buffer_t * object);
+
+  //! @brief Stops further calls of the buffer
+  //!
+  //! @details Stops the buffer; no new functions can be called from this
+  //! point onwards. Functions that are already running will continue to be executed.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns whether the buffer could be stopped without problems.
+  //! @retval true The buffer was successfully stopped.
+  //! @retval false The buffer could not be stopped.
+  bool (* StopForce) (buffer_t * object);
+
+  //! @brief Try to stop the buffer
+  //!
+  //! @details Checks whether the buffer can be stopped and stops it
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //! - consumer/get thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @return Returns whether the buffer could be stopped without problems.
+  //! @retval true The buffer was successfully stopped.
+  //! @retval false The buffer could not be stopped.
+  bool (* StopTry) (buffer_t * object);
+
+  //! @brief Writes a string to the buffer
+  //!
+  //! @details Writes a string to the buffer.
+  //! The string should be terminated with the string terminator '\\0'.
+  //! Otherwise, as many characters as specified in the parameter @p n are saved.
+  //!
+  //! Does not block and does not guarantee a write. The return value must
+  //! be checked to ensure that everything has been written.
+  //!
+  //! Can be use in:
+  //! - producer/set thread.
+  //!
+  //! @param[in,out] object The buffer object
+  //! @param[in] src Contains the string or the characters.
+  //! @param n The number of characters to be stored in the buffer.
+  //! The length of the buffer (parameter @p src) can be used.
+  //! The string terminator character '\\0' is not written to the buffer.
+  //! @return Returns the number of characters written
+  size_t (* Write) (buffer_t * object, const char *src, size_t n);
 };
 
 
@@ -437,33 +717,6 @@ extern const struct buffer_sc buffer;
 //! @retval false Buffer could not be clear
 //! @retval true  Buffer could be clear
 bool buffer_clear(buffer_t * object);
-
-//! @brief Copying one structure to another
-//!
-//! @details Compares all elements of the structure
-//!
-//! Can be use in:
-//! - producer/set thread.
-//! - consumer/get thread.
-//!
-//! @param[in] object Object that is copied
-//! @param[out] dest Target which is overwritten
-void buffer_copy(const buffer_t * object, buffer_t * dest);
-
-//! @brief Compares two struct objects of type ::buffer_s and returns whether they are equal
-//!
-//! @details Compares all elements of the structure
-//!
-//! Can be use in:
-//! - producer/set thread, with stopped buffer
-//! - consumer/get thread, with stopped buffer
-//!
-//! @param[in] object The buffer object
-//! @param[in] object2 The buffer object
-//! @return Returns whether the struct objects are equal
-//! @retval true  Struct objects are equal
-//! @retval false Struct objects are different
-bool buffer_equal(const buffer_t * object, const buffer_t * object2);
 
 //! @brief Reads a character or waits until it can be executed.
 //!
@@ -503,13 +756,14 @@ char buffer_get_available_or_null(buffer_t * object);
 //! ::buffer_is_stoped() to check if the buffer could be stopped.
 //!
 //! @param[in,out] object The buffer object
+//! @param[in,out] handlers Optional pointer; if set, the handlers in the structure are called, provided they are not NULL.
 //! @param data The `char` array which stores the data
-//! @param sizeof_data Length of the `char` array in which the data is stored. ::sizeof() can be used if it is an array whose size is known at compile time.
+//! @param sizeof_data Length of the `char` array in which the data is stored. `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param start Starting or stopping the buffer, if parameter @p data is NULL, the buffer cannot be started.
 //! @return Returns whether the buffer could be stopped without problems.
 //! @retval true The buffer was successfully stopped.
 //! @retval false The buffer could not be stopped.
-bool buffer_init(buffer_t * object, char * data, size_t sizeof_data, bool start);
+bool buffer_init(buffer_t * object, buffer_handler_t * handlers, char * data, size_t sizeof_data, bool start);
 
 //! @brief Checks if the buffer is empty
 //!
@@ -809,55 +1063,26 @@ size_t buffer_write(buffer_t * object, const char *src, size_t n);
  *  public: static inline functions
  *---------------------------------------------------------------------*/
 
-#ifdef BUFFER_ENABLE_HANDLER
+
 
 //! @brief Define statement for initializing a new structure
 //!
 //! @param DATA Start address of the buffer
 //! @param DATA_LENGTH Length of the buffer
 //! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) { \
-    /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
-    /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
-    /* .end_of_line_character = */ '\n', \
-    /* .on_start              = */ (NULL), \
-    /* .on_stop               = */ (NULL), \
-    /* .on_full               = */ (NULL), \
-    /* .on_empty              = */ (NULL), \
-    /* .on_new_character      = */ (NULL), \
-    /* .on_new_line           = */ (NULL), \
-    /* .on_error              = */ (NULL), \
-    /* .on_wait_set           = */ (NULL), \
-    /* .on_wait_get           = */ (NULL), \
-    /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
-    /* .user_data             = */ (NULL), \
+#define BUFFER_INIT(HANDLERS, DATA, DATA_LENGTH, START) \
+(buffer_t){ \
+  /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
+  /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
+  /* .end_of_line_character = */ '\n', \
+  /* .handlers              = */ (HANDLERS), \
+  /* .consumer_ptr          = */ (DATA), \
+  /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
+  /* .length                = */ ATOMIC_VAR_INIT(0), \
+  /* .lines                 = */ ATOMIC_VAR_INIT(0), \
+  /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
+  /* .user_data             = */ NULL, \
 } //;
-
-
-#else
-
-//! @brief Define statement for initializing a new structure
-//!
-//! @param DATA Start address of the buffer
-//! @param DATA_LENGTH Length of the buffer
-//! @param START Starting or stopping the buffer, if parameter @p DATA is NULL, the buffer cannot be started
-#define BUFFER_INIT(DATA, DATA_LENGTH, START) { \
-    /* .data                  = */ (0 == (DATA_LENGTH)) ? NULL : (DATA), \
-    /* .last                  = */ ((NULL == (DATA)) || (0 == (DATA_LENGTH)) ) ? NULL : (char *)(DATA) + (DATA_LENGTH) - 1, \
-    /* .end_of_line_character = */ '\n', \
-    /* .consumer_ptr          = */ (DATA), \
-    /* .producer_ptr          = */ ATOMIC_VAR_INIT(DATA), \
-    /* .length                = */ ATOMIC_VAR_INIT(0), \
-    /* .lines                 = */ ATOMIC_VAR_INIT(0), \
-    /* .state                 = */ ATOMIC_VAR_INIT( ( (NULL != (DATA)) && (0 != (DATA_LENGTH)) && (START) ) ? BUFFER_FLAGS_IDLE : BUFFER_FLAGS_STOP ), \
-    /* .user_data             = */ (NULL), \
-} //;
-
-#endif
 
 
 #ifdef __cplusplus
