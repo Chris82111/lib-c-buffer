@@ -9,6 +9,16 @@
 
 </div>
 
+<picture>
+  <img
+    alt="Function of the buffer"
+    src="./docs/buffer.svg"
+    width=220" />
+</picture>
+
+> [!CAUTION]
+> The logic is currently being updated, so the following information may no longer be valid.
+
 This C library provides a conveniently usable `buffer_t` type for managing a `char` array as an FIFO buffer. It enables simple filling and emptying - without the typical complexities of conventional synchronization. The library is written in pure C and provides a compatible header file for use in C and C++ projects - bidirectional and flexible.
 
 The library was developed efficiently, but without a focus on speed, the focus is a lock-free implementation and the effective handling of parallel and concurrent tasks. As a result, it is highly versatile and suitable for use across a wide range of platforms, from embedded systems to high-performance computers.
