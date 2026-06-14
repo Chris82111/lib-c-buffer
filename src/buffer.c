@@ -60,7 +60,6 @@ const struct buffer_sc buffer =
   buffer_try_read_to,
 
   buffer_clear,
-
 };
 
 
@@ -842,7 +841,7 @@ size_t buffer_read_line (buffer_t * object, char * dest, size_t sizeof_dest)
 
 ptrdiff_t buffer_try_read_line (buffer_t * object, char * dest, size_t sizeof_dest)
 {
-  assert(PTRDIFF_MAX > sizeof_dest);
+  assert(PTRDIFF_MAX > sizeof_dest && "This functions return negative index values, so the entire range of `size_t` values cannot be used." );
 
   if ((NULL == object     ) ||
       (NULL == dest       ) ||
@@ -859,13 +858,13 @@ ptrdiff_t buffer_try_read_line (buffer_t * object, char * dest, size_t sizeof_de
 
   sizeof_dest -= 1;
 
-  ptrdiff_t i;
+  size_t i;
   char c;
 
   bool error = true;
   char eol = object->end_of_line_character;
 
-  for (i = 0; i < (ptrdiff_t)sizeof_dest; dest++, i++)
+  for (i = 0; i < sizeof_dest; dest++, i++)
   {
     if (false == buffer_try_get(object, &c))
     {
@@ -884,7 +883,7 @@ ptrdiff_t buffer_try_read_line (buffer_t * object, char * dest, size_t sizeof_de
 
   if (error)
   {
-      i = -i;
+    return -i;
   }
 
   return i;
@@ -938,8 +937,10 @@ size_t buffer_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const
   return i;
 }
 
-size_t buffer_try_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data)
+ptrdiff_t buffer_try_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data)
 {
+  assert(PTRDIFF_MAX > sizeof_dest && "This functions return negative index values, so the entire range of `size_t` values cannot be used." );
+
   if ((NULL == object     ) ||
       (NULL == dest       ) ||
       (0    == sizeof_dest) ||

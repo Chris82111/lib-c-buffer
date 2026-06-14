@@ -159,11 +159,6 @@ typedef struct buffer_try_read_to_s buffer_try_read_to_t;
 
 
 //! @brief A function pointer used by ::buffer_s that passes its own structure pointer
-//!
-//! @details Used in the functions handler:
-//! - buffer_s::buffer_set()
-//! - buffer_s::buffer_get()
-//!
 //! @param[in,out] object The buffer object
 //! @return Freely usable return value
 typedef char (*buffer_function_handler_t)(buffer_t * object);
@@ -171,10 +166,15 @@ typedef char (*buffer_function_handler_t)(buffer_t * object);
 
 //! @brief Struct to create a buffer object, like an instance of a class
 //!
-//! @details The buffer struct can be used to exchange data between threads or a thread and an interrupt.
-//!
-//!          Due to the implementation, one buffer element will remain empty.
-//!          Therefore, one more element must be reserved than will later be available.
+//! @details The advantages of the buffer are:
+//! - The buffer struct can be used to exchange data between:
+//!   - threads,
+//!   - a thread and an interrupt.
+//! - Due to the implementation, one buffer element will remain empty.
+//!   Therefore, one more element must be reserved than will later be available.
+//! - There are only three variables that should be set by the programmer:
+//!   ::end_of_line_character, ::on_sleep, and ::user_data.
+//! - All others members should be treated as private internal values and must not be modified.
 struct buffer_s
 {
   //! @brief Consumer head pointer
@@ -211,9 +211,10 @@ struct buffer_s
 
   //! @brief Number of newline characters
   //! @details Current number of newline character stored in the buffer.
-  //! - If characters are read without paying attention to `Lines`, they can
-  //!   read a line, and when they reach the end-of-line character, the
-  //!   variable will be decrement to a negative value.
+  //! - If characters are read without paying attention to this member or calling
+  //!   `::buffer_lines()`, the consumer thread can read a line, and when they
+  //!   reach the end-of-line character, the variable will be decrement to a negative value.
+  //!   The subsequent producer thread corrects the value, but negative values are possible.
   _Atomic(ptrdiff_t) lines;
 
   //! @brief Consumer internal counter variable for internal use
@@ -228,10 +229,10 @@ struct buffer_s
   //! @details End of line character, standard is '\\n'
   char end_of_line_character;
 
-  //! @brief End-Of-Line character
-  //! @details A handler that is called in every cycle:
+  //! @brief A handler that is called in every wait cycle
+  //! @details A handler that is called in every wait cycle:
   //! - It is called by ::buffer_set() when no memory is available.
-  //! - It is called by ::buffer_get() when no characters are available.
+  //! - It is called by ::buffer_get() and ::buffer_wait_get() when no characters are available.
   //! - Any return value other than 0 causes the wait loop to be exited
   //! - `NULL` is allowed.
   buffer_function_handler_t on_sleep;
@@ -654,7 +655,7 @@ struct buffer_sc
   //! @param to_length The length of the buffer.
   //! @param data Temporary data to prevent loss of the current state.
   //! @return Returns the number of characters read as a negative value if the 'to' string is not contained in the read string
-  size_t (* TryReadTo) (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data);
+  ptrdiff_t (* TryReadTo) (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data);
 
 
   //! @brief Clears the buffer
@@ -1077,7 +1078,7 @@ size_t buffer_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const
 //! @param to_length The length of the buffer.
 //! @param data Temporary data to prevent loss of the current state.
 //! @return Returns the number of characters read as a negative value if the 'to' string is not contained in the read string
-size_t buffer_try_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data);
+ptrdiff_t buffer_try_read_to (buffer_t * object, char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data);
 
 
 
@@ -1111,6 +1112,14 @@ void buffer_clear (buffer_t * object);
   /* .end_of_line_character = */ '\n', \
   /* .on_sleep  = */ NULL, \
   /* .user_data = */ NULL, \
+} // ;
+
+//! @brief Define statement for initializing a new structure
+#define BUFFER_TRY_READ_TO_INIT() \
+(buffer_try_read_to_t) { \
+  /* .index = */ 0, \
+  /* .dest = */ NULL, \
+  /* .compare = */ NULL, \
 } // ;
 
 

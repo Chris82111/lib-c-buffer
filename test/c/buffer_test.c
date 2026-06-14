@@ -1,7 +1,8 @@
 #include <buffer.h>
 #include <string.h>
 #include <stdio.h>
-
+#include <pthread.h>
+#include <unistd.h>
 
 #define UNUSED(x) (void)(x)
 
@@ -1120,11 +1121,11 @@ static int buffer_test_read_line_and_try_read_line (void)
   if (0 != memcmp(read, "World", strlen("World"))) { errors++; }
 
 
-//  buffer_test_set_sleep_counter = 4;
-//  b.on_sleep = buffer_test_set_sleep;
-//
-//  i = buffer.ReadLine(&b, read, sizeof_buf);
-//  if (0 != i) { errors++; }
+  buffer_test_set_sleep_counter = 4;
+  b.on_sleep = buffer_test_set_sleep;
+
+  i = buffer.ReadLine(&b, read, sizeof_buf);
+  if (0 != i) { errors++; }
 
   buffer.Clear(&b);
 
@@ -1256,14 +1257,14 @@ static int buffer_test_try_read_to (void)
   buf[sizeof_buf] = 0;
 
   buffer_t b;
-  buffer_try_read_to_t stat = (buffer_try_read_to_t){ 0 };
+  buffer_try_read_to_t stat = BUFFER_TRY_READ_TO_INIT();
 
   b = BUFFER_INIT(buf, sizeof_buf);
 
   i = buffer.WriteCStr(&b, "Hello World\r\n", SIZE_MAX, SIZE_MAX);
   i = buffer.TryReadTo(&b, out, sizeof_buf, "\r\n", 2, &stat);
 
-  stat = (buffer_try_read_to_t){ 0 };
+  stat = BUFFER_TRY_READ_TO_INIT();
   ptrdiff_t j = 0;
   UNUSED(j);
 
@@ -1273,7 +1274,7 @@ static int buffer_test_try_read_to (void)
   return errors;
 }
 
-static void buffer_example_1 (void)
+static void example_1 (void)
 {
   char buf[32 + 1]; // +1 byte empty
   char read[10 + 1]; // +1 byte '\0'
@@ -1283,18 +1284,68 @@ static void buffer_example_1 (void)
   buffer.TrySet(&b, '\n');
   buffer.TryWriteCStr(&b, "Hello\nWorld\n", sizeof("Hello\nWorld\n"), strlen("Hello\nWorld\n"));
 
-  size_t i = 0;
-  while(buffer.TryReadLine(&b, read, sizeof(read)))
+  size_t length;
+  size_t line = 0;
+  while(0 < (length = buffer.TryReadLine(&b, read, sizeof(read))))
   {
-      printf("%zu: %s\n", i++, read);
+      printf("%zu: %s (%zu)\n", line++, read, length);
+      fflush(stdout);
   }
+}
+
+static char uart_buf[10 + 1];
+static buffer_t uart = BUFFER_INIT(uart_buf, sizeof(uart_buf));
+
+static void example_2_init(void)
+{
+    uart.end_of_line_character = '\r';
+}
+
+static void * example_2_receive(void *arg)
+{
+  sleep(1);
+  buffer.TrySet(&uart, 'H');
+
+  sleep(1);
+  buffer.TrySet(&uart, 'i');
+
+  sleep(1);
+  buffer.TrySet(&uart, '\r');
+
+  return arg;
+}
+
+static void example_2_uart(void)
+{
+  pthread_t thread1;
+  char input[10];
+  size_t reads = 0;
+
+  example_2_init();
+
+  pthread_create(&thread1, NULL, example_2_receive, NULL);
+
+  for(reads = 0; true; reads++)
+  {
+    if(buffer.TryReadLine(&uart, input, sizeof(input)))
+    {
+      break;
+    }
+  }
+
+  printf("received: %s\n", input);
+  printf("reads   : %zu\n", reads);
+  fflush(stdout);
+
+  pthread_join(thread1, NULL);
 }
 
 int buffer_test(void)
 {
   int errors = 0;
 
-  buffer_example_1();
+  example_1();
+  example_2_uart();
 
   errors += buffer_test_init();
   errors += buffer_test_set_get();
