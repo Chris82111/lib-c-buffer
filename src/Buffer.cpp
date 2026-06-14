@@ -1,5 +1,5 @@
 //! @file
-//! @brief Source file EventLf.cpp
+//! @brief Source file Buffer.cpp
 
 
 // ------------------------------------------------------------------------- //
@@ -151,6 +151,21 @@ size_t Buffer::Space ()
 size_t Buffer::WriteCStr (const char *src, size_t sizeof_src, size_t characters)
 {
   return buffer_write_c_str (c_object, src, sizeof_src, characters);
+}
+
+size_t Buffer::Write(std::span<const char> src)
+{
+  return buffer_write_c_str(c_object, src.data(), src.size(), SIZE_MAX);
+}
+
+size_t Buffer::Write(std::string_view sv)
+{
+    return WriteCStr(sv.data(), sv.size(), sv.size());
+}
+
+size_t Buffer::Write(const char* src)
+{
+  return buffer_write_c_str(c_object, src, SIZE_MAX, SIZE_MAX);
 }
 
 size_t Buffer::TryWriteCStr (const char *src, size_t sizeof_src, size_t characters)

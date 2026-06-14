@@ -2,8 +2,8 @@
 
 <div align="center">
 
-  [![C](https://img.shields.io/badge/language-C-a9bacd)](https://www.c-language.org/ "Link to web page")
-  [![C++](https://img.shields.io/badge/language-C%2B%2B-649ad2)](https://isocpp.org/ "Link to web page") \
+  [![C](https://img.shields.io/badge/language-C_11-a9bacd)](https://www.c-language.org/ "Link to web page")
+  [![C++](https://img.shields.io/badge/language-C%2B%2B_23-649ad2)](https://isocpp.org/ "Link to web page") \
   [![Visual Studio Code](https://img.shields.io/badge/IDE-Visual%20Studio%20Code-0065a9)](https://code.visualstudio.com/ "Link to web page")
   [![Eclipse](https://img.shields.io/badge/IDE-Eclipse-3f3179)](https://www.eclipse.org/ "Link to web page")
 

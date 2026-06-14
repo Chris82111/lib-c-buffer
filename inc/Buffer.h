@@ -306,6 +306,12 @@ public:
   //! @return Returns the number of characters written
   size_t WriteCStr (const char *src, size_t sizeof_src, size_t characters);
 
+  size_t Write(std::span<const char> src);
+
+  size_t Write(std::string_view str);
+
+  size_t Write(const char* src);
+
   //! @brief Writes a string to the buffer or skips it if this is not possible
   //!
   //! @details Writes a string to the buffer or skips it if this is not possible

@@ -67,6 +67,10 @@ static int buffer_test_basics ()
   c = b2.Get();
   if ('H' != c) { errors++; }
 
+  b2.Write("Hello");
+  b2.TryReadCStr(buf10, sizeof(buf10), SIZE_MAX);
+  cout << buf10 << endl;
+
   return errors;
 }
 
