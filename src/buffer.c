@@ -15,6 +15,70 @@
 //  private: definitions
 // ------------------------------------------------------------------------- //
 // ------------------------------------------------------------------------- //
+//  private: macros like functions
+// ------------------------------------------------------------------------- //
+
+//! @brief Estimate whether the type is lock-free, based on its size
+//!
+//! @details This macro maps only the size of a given type `T` to the
+//!          corresponding `ATOMIC_*_LOCK_FREE` macro defined in
+//!          `<stdatomic.h>`. It provides a compile-time estimation of
+//!          whether atomic operations on objects of that size are
+//!          lock-free on the target platform.
+//!
+//!          For precise, runtime determination, use `::buffer_atomic_is_lock_free()`.
+//!
+//! @param T The type to check for lock-free atomic support
+//!
+//! @return An integer constant indicating the lock-free property
+//! @retval 0 Never lock-free or no matching fundamental type exists
+//! @retval 1 Sometimes lock-free
+//! @retval 2 Always lock-free
+//!
+#define ATOMIC_LOCK_FREE_BY_SIZE(T) \
+( \
+  sizeof(T) == sizeof(char)      ? ATOMIC_CHAR_LOCK_FREE  : \
+  sizeof(T) == sizeof(short)     ? ATOMIC_SHORT_LOCK_FREE : \
+  sizeof(T) == sizeof(int)       ? ATOMIC_INT_LOCK_FREE   : \
+  sizeof(T) == sizeof(long)      ? ATOMIC_LONG_LOCK_FREE  : \
+  sizeof(T) == sizeof(long long) ? ATOMIC_LLONG_LOCK_FREE : \
+  0 \
+) // ;
+
+//! @brief Estimate at compile-time that a type is always lock-free for atomic operations
+//!
+//! @details If the type is not always lock-free, compilation will fail with
+//!          an error message indicating the offending type.
+//!
+//!          To perform a runtime test use `check_lock_free_runtime()`
+//!
+//! @param T The type to check for lock-free atomic support.
+//!
+#define CHECK_LOCK_FREE_COMPILE_TIME(T) \
+  _Static_assert(                                  \
+    ATOMIC_LOCK_FREE_BY_SIZE(T) == 2,              \
+    #T " is not always lock-free on this platform" \
+  )                                               // ;
+
+
+//! @cond INTERNAL
+
+CHECK_LOCK_FREE_COMPILE_TIME(char *);
+
+CHECK_LOCK_FREE_COMPILE_TIME(uint16_t);
+
+CHECK_LOCK_FREE_COMPILE_TIME(ptrdiff_t);
+
+CHECK_LOCK_FREE_COMPILE_TIME(size_t);
+
+#if ATOMIC_POINTER_LOCK_FREE != 2
+#error "Atomic pointer is not always lock-free; signal handler may deadlock."
+#endif
+
+//! @endcond
+
+
+// ------------------------------------------------------------------------- //
 //  private: typedefs
 // ------------------------------------------------------------------------- //
 // ------------------------------------------------------------------------- //
@@ -224,6 +288,21 @@ static void try_move_tail_to_head_consumer (buffer_t * object)
 // ------------------------------------------------------------------------- //
 //  public:  functions
 // ------------------------------------------------------------------------- //
+
+bool buffer_check_lock_free_runtime(void)
+{
+  _Atomic(char *) var1;
+  _Atomic(uint16_t) var2;
+  _Atomic(ptrdiff_t) var3;
+  _Atomic(size_t) var4;
+
+  return atomic_is_lock_free(&var1)
+    && atomic_is_lock_free(&var2)
+    && atomic_is_lock_free(&var3)
+    && atomic_is_lock_free(&var4);
+}
+
+
 
 void buffer_init (buffer_t * object, char * data, size_t sizeof_data)
 {

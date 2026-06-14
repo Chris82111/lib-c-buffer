@@ -269,7 +269,7 @@ struct buffer_sc
   //! @details Function for initialization the buffer object.
   //!
   //! @param[in,out] object The buffer object
-  //! @param data The `char` array which stores the data
+  //! @param[in] data The `char` array which stores the data
   //! @param sizeof_data Length of the `char` array in which the data is stored.
   //! `sizeof()` can be used if it is an array whose size is known at compile time.
   void (* Init) (buffer_t * object, char * data, size_t sizeof_data);
@@ -682,12 +682,24 @@ extern const struct buffer_sc buffer;
 //  public: function prototypes
 // ------------------------------------------------------------------------- //
 
+//! @brief Checks at runtime whether selected atomic types are lock-free.
+//!
+//! @details This function verifies that all atomic types used in
+//!          `buffer_t` are lock-free on the current platform.
+//!
+//! @return If all tested atomic types are lock-free
+//! @retval true If all tested atomic types are lock-free
+//! @retval false If not all tested atomic types are lock-free
+bool buffer_check_lock_free_runtime(void);
+
+
+
 //! @brief Function for initialization
 //!
 //! @details Function for initialization the buffer object.
 //!
 //! @param[in,out] object The buffer object
-//! @param data The `char` array which stores the data
+//! @param[in] data The `char` array which stores the data
 //! @param sizeof_data Length of the `char` array in which the data is stored.
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 void buffer_init (buffer_t * object, char * data, size_t sizeof_data);
@@ -788,7 +800,7 @@ bool buffer_try_get (buffer_t * object, char * c);
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param bytes The number of bytes to be stored in the buffer.
 //! @return Returns the number of bytes written
-size_t buffer_write_bytes(buffer_t * object, const char *src, size_t sizeof_src, size_t bytes);
+size_t buffer_write_bytes (buffer_t * object, const char *src, size_t sizeof_src, size_t bytes);
 
 //! @brief Writes an array to the buffer or skips it if this is not possible
 //!
@@ -801,7 +813,7 @@ size_t buffer_write_bytes(buffer_t * object, const char *src, size_t sizeof_src,
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param bytes The number of bytes to be stored in the buffer.
 //! @return Returns the number of bytes written
-size_t buffer_try_write_bytes(buffer_t * object, const char *src, size_t sizeof_src, size_t bytes);
+size_t buffer_try_write_bytes (buffer_t * object, const char *src, size_t sizeof_src, size_t bytes);
 
 //! @brief Reads an array from the buffer
 //!
@@ -814,7 +826,7 @@ size_t buffer_try_write_bytes(buffer_t * object, const char *src, size_t sizeof_
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param bytes The number of bytes to be taken from the buffer.
 //! @return Returns the number of bytes read
-size_t buffer_read_bytes(buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
+size_t buffer_read_bytes (buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
 
 //! @brief Reads an array from the buffer or skips it if this is not possible
 //!
@@ -827,7 +839,7 @@ size_t buffer_read_bytes(buffer_t * object, char * dest, size_t sizeof_dest, siz
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param bytes The number of bytes to be taken from the buffer.
 //! @return Returns the number of bytes read
-size_t buffer_try_read_bytes(buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
+size_t buffer_try_read_bytes (buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
 
 //! @brief Look at the buffer as if the data were being read or skips it if this is not possible
 //!
@@ -852,7 +864,7 @@ size_t buffer_try_read_bytes(buffer_t * object, char * dest, size_t sizeof_dest,
 //! `sizeof()` can be used if it is an array whose size is known at compile time.
 //! @param bytes The number of bytes to be taken from the buffer.
 //! @return Returns the number of bytes read
-size_t buffer_try_peek_bytes(buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
+size_t buffer_try_peek_bytes (buffer_t * object, char * dest, size_t sizeof_dest, size_t bytes);
 
 
 

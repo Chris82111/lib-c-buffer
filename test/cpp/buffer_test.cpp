@@ -3,7 +3,7 @@
  *---------------------------------------------------------------------*/
 
 #include "buffer_test.h"
-#include "buffer.h"
+#include "Buffer.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -13,12 +13,23 @@
 #include <iostream>
 #include <thread>
 
+using namespace std;
+
 
 /*---------------------------------------------------------------------*
  *  private: definitions
  *---------------------------------------------------------------------*/
 
 #define LENGTH(ARRAY) (sizeof(ARRAY)/sizeof(ARRAY[0]))
+
+
+//! @def UNUSED
+//! @brief This prevents warnings related to variables
+//! @details Marks a variable to suppress compiler warnings about unused variables.
+//!
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
 
 
 /*---------------------------------------------------------------------*
@@ -37,75 +48,65 @@
  *  private: functions
  *---------------------------------------------------------------------*/
 
-static int buffer_test_some_working_nothing_special(void)
+static int buffer_test_basics ()
 {
-    int errors = 0;
+  int errors = 0;
 
-    char buf[11];
+  char c;
+
+  char buf10[10+1];
+  auto b1 = Buffer(buf10, sizeof(buf10));
+  b1.Set('H');
+  c = b1.Get();
+  if ('H' != c) { errors++; }
 
 
-    buffer_t obj;
-    buffer.Init(&obj, buf, sizeof(buf), true);
+  std::array<char, 10+1> data10;
+  auto b2 = Buffer(data10);
+  b2.Set('H');
+  c = b2.Get();
+  if ('H' != c) { errors++; }
 
-#if false
-
-    buffer_t obj_works_too = BUFFER_INIT(buf, sizeof(buf), true);
-
-#endif
-
-    size_t length = atomic_load(&obj.length);
-    if(buffer.Length(&obj) != length){ errors += 1; }
-
-    if(buf != obj.consumer_ptr){ errors += 1; }
-
-    auto producer_ptr = atomic_load(&obj.producer_ptr);
-    if(buf != producer_ptr){ errors += 1; }
-
-    atomic_store(&obj.producer_ptr, producer_ptr);
-
-    atomic_fetch_add(&obj.producer_ptr, 1);
-    atomic_fetch_sub(&(obj.producer_ptr), 1);
-    atomic_fetch_add(&obj.producer_ptr, 1);
-    atomic_fetch_sub(&(obj.producer_ptr), 1);
-
-    char * ptr = buf;
-
-    if(true != atomic_compare_exchange_strong(&obj.producer_ptr, &ptr, buf)){ errors += 1; }
-    if(true != atomic_compare_exchange_strong(&obj.producer_ptr, &ptr, buf)){ errors += 1; }
-
-    char text[] = "Hello World";
-    buffer.Write(&obj, text, sizeof(text));
-    if(11 != buffer.Length(&obj)){ errors += 1; }
-
-    return errors;
+  return errors;
 }
 
-buffer_t thread_buffer_obj;
-char thread_buffer_buf[255];
+std::array<char, 10+1> thread_buffer_buf;
+Buffer obj = Buffer(thread_buffer_buf);
+
 char thread_buffer_read[255];
+
+uint64_t setCalls = 0;
+uint64_t getCalls = 0;
 
 // Function for the first thread
 void threadFunction1() {
-    static char c[] = { "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ" };
-    for (int i = 0; i < 63; ++i) {
-        buffer.Set(&thread_buffer_obj, c[(size_t)i % (sizeof(c) - 1)]);
+  static char c[] = { "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ" };
+  for (int j = 0; j < 100; j++)
+  {
+    for (int i = 0; i < 255; i++)
+    {
+      setCalls++;
+      buffer.Set(obj.c_object, c[(size_t)i % (sizeof(c) - 1)]);
     }
+  }
 }
 
 // Function for the second thread
 void threadFunction2() {
-    int i;
-    for (i = 0; i < 63; ++i) {
-        thread_buffer_read[i] = buffer.Get(&thread_buffer_obj);
+  int i;
+  for (int j = 0; j < 100; j++)
+  {
+    for (i = 0; i < 255; ++i)
+    {
+      getCalls++;
+      thread_buffer_read[i] = obj.Get();
     }
-    thread_buffer_read[i] = '\0';
+  }
 }
 
 static int buffer_test_threads(void)
 {
     int errors = 0;
-
-    buffer.Init(&thread_buffer_obj, thread_buffer_buf, sizeof(thread_buffer_buf), true);
 
     std::thread t2(threadFunction2);
     std::thread t1(threadFunction1);
@@ -113,6 +114,8 @@ static int buffer_test_threads(void)
     // Wait for threads to finish
     t1.join();
     t2.join();
+
+    if (getCalls != setCalls) { errors++; }
 
     return errors;
 }
@@ -124,12 +127,11 @@ static int buffer_test_threads(void)
 
 int buffer_test(void)
 {
-    int errors = 0;
+  int errors = 0;
+  errors += buffer_test_basics();
+  errors += buffer_test_threads();
 
-    errors += buffer_test_some_working_nothing_special();
-    errors += buffer_test_threads();
-
-    return errors;
+  return errors;
 }
 
 
