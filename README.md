@@ -2,14 +2,24 @@
 
 <div align="center">
 
-  [![C](https://img.shields.io/badge/language-C-a9bacd)](https://www.c-language.org/ "Link to web page")
-  [![C++](https://img.shields.io/badge/language-C%2B%2B-649ad2)](https://isocpp.org/ "Link to web page") \
+  [![C](https://img.shields.io/badge/language-C_11-a9bacd)](https://www.c-language.org/ "Link to web page")
+  [![C++](https://img.shields.io/badge/language-C%2B%2B_23-649ad2)](https://isocpp.org/ "Link to web page") \
   [![Visual Studio Code](https://img.shields.io/badge/IDE-Visual%20Studio%20Code-0065a9)](https://code.visualstudio.com/ "Link to web page")
   [![Eclipse](https://img.shields.io/badge/IDE-Eclipse-3f3179)](https://www.eclipse.org/ "Link to web page")
 
 </div>
 
 This C library provides a conveniently usable `buffer_t` type for managing a `char` array as an FIFO buffer. It enables simple filling and emptying - without the typical complexities of conventional synchronization. The library is written in pure C and provides a compatible header file for use in C and C++ projects - bidirectional and flexible.
+
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="./docs/buffer_dark.svg" />
+  <img
+    alt="Function of the buffer"
+    src="./docs/buffer.svg"
+    width=300" />
+</picture>
 
 The library was developed efficiently, but without a focus on speed, the focus is a lock-free implementation and the effective handling of parallel and concurrent tasks. As a result, it is highly versatile and suitable for use across a wide range of platforms, from embedded systems to high-performance computers.
 
@@ -24,9 +34,9 @@ The library was developed efficiently, but without a focus on speed, the focus i
 </picture>
 
 - Thread/interrupt-Safe & Lock-Free:
-Supports parallel and concurrent execution through two dedicated tasks - one reader and one writer - without the use of semaphores or memory fences.
+Supports parallel and concurrent execution through dedicated tasks - readers and writers - without the use of semaphores or memory fences.
 - Atomic operations:
-Synchronization is achieved exclusively through modern, atomic operations - for maximum efficiency and portability. `_Atomic(T)` in C and `std::atomic<T>` in C++.
+Synchronization is achieved exclusively through modern, atomic operations - for maximum efficiency and portability. `_Atomic(T)` in C and C++.
 
 <picture>
   <source
@@ -51,75 +61,77 @@ Synchronization is achieved exclusively through modern, atomic operations - for 
 The following examples show how you can use the buffer.
 
 ```C
-void example_handler(buffer_t * object)
+void example_1 (void)
 {
-    char buf[10];
+  char buf[32 + 1]; // +1 byte empty
+  char read[10 + 1]; // +1 byte '\0'
+  buffer_t b = BUFFER_INIT(buf, sizeof(buf));
 
-    buffer.ReadLine(object, buf, sizeof(buf));
+  buffer.TrySet(&b, '1');
+  buffer.TrySet(&b, '\n');
+  buffer.TryWriteCStr(&b, "Hello\nWorld\n", sizeof("Hello\nWorld\n"), strlen("Hello\nWorld\n"));
 
-    printf("Out: %s\n", buf);
-    fflush(stdout);
-}
-
-void example_1(void)
-{
-    char buf[10];
-    buffer_t obj;
-
-    buffer.Init(&obj, buf, sizeof(buf), true);
-    obj.new_line = example_handler;
-
-    buffer.Write(&obj, "Hi you", 2);
-    buffer.Set(&obj, '\n');
-}
-
-void example_2(void)
-{
-    buffer_t * p = buffer.ObjectAllocate(NULL, 10, true);
-    if(NULL != p)
-    {
-        p->new_line = example_handler;
-        buffer.Write(p, "Hi you", 2);
-        buffer.Set(p, '\n');
-    }
-    buffer.ObjectFree(p);
+  size_t length;
+  size_t line = 0;
+  while(0 < (length = buffer.TryReadLine(&b, read, sizeof(read))))
+  {
+      printf("%zu: %s (%zu)\n", line++, read, length);
+      fflush(stdout);
+  }
 }
 ```
 
 ## Example UART
 
 This is an example of how the code can be used on an embedded system.
+The sample program runs on any standard computer; since it lacks interrupts,
+as is the case with embedded systems, threads were used here.
 
 ```C
-char uart_buf[10];
-buffer_t uart = BUFFER_INIT(
-    uart_buf, sizeof(uart_buf), false);
+char uart_buf[10 + 1];
+buffer_t uart = BUFFER_INIT(uart_buf, sizeof(uart_buf));
 
-void example_3_init(void)
+void example_2_init(void)
 {
-    buffer.Start(&uart);
     uart.end_of_line_character = '\r';
 }
 
-void example_3_receive(void)
+void * example_2_receive(void *arg)
 {
-    buffer.SetPossibleOrSkip(&uart, 'H');
-    buffer.SetPossibleOrSkip(&uart, 'i');
-    buffer.SetPossibleOrSkip(&uart, '\r');
+  sleep(1);
+  buffer.TrySet(&uart, 'H');
+
+  sleep(1);
+  buffer.TrySet(&uart, 'i');
+
+  sleep(1);
+  buffer.TrySet(&uart, '\r');
+
+  return arg;
 }
 
-void example_3_main_loop(void)
+void example_2_uart(void)
 {
-    char input[10];
-    
-    // while(1) {
-    
-    if(buffer.ReadLine(&uart, input, sizeof(input)))
+  pthread_t thread1;
+  char input[10];
+  size_t reads = 0;
+
+  example_2_init();
+
+  pthread_create(&thread1, NULL, example_2_receive, NULL);
+
+  for(reads = 0; true; reads++)
+  {
+    if(buffer.TryReadLine(&uart, input, sizeof(input)))
     {
-        printf("Out: %s\n", input);
-        fflush(stdout);
+      break;
     }
-    
-    // }
+  }
+
+  printf("received: %s\n", input);
+  printf("reads   : %zu\n", reads);
+  fflush(stdout);
+
+  pthread_join(thread1, NULL);
 }
 ```

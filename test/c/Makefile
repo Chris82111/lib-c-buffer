@@ -1,7 +1,7 @@
 CC      = gcc
 CXX     = g++
 
-FLAGS  = -Wall -Wextra -g -MMD -MP -std=c11
+FLAGS  = -Wall -Wextra -g -MMD -MP -std=c11 -pthread
 CXXFLAGS= -Wall -Wextra -g -MMD -MP -std=c++23
  
 SRC_DIR = ./../../src
