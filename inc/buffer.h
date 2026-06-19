@@ -1100,6 +1100,15 @@ ptrdiff_t buffer_try_read_to (buffer_t * object, char * dest, size_t sizeof_dest
 void buffer_clear (buffer_t * object);
 
 
+
+//! @brief Function for initialization
+//!
+//! @details Function for initialization the buffer_try_read_to_t object.
+//!
+//! @param[in,out] object The buffer_try_read_to_t object
+void buffer_try_read_to_init (buffer_try_read_to_t * object);
+
+
 // ------------------------------------------------------------------------- //
 //  public: static inline functions
 // ------------------------------------------------------------------------- //

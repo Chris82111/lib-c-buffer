@@ -15,10 +15,10 @@
 //  public: include files
 // ------------------------------------------------------------------------- //
 
-#include <fstream>
-
 #include "buffer.h"
 
+#include <fstream>
+#include <concepts>
 
 // ------------------------------------------------------------------------- //
 //  public: define
@@ -30,11 +30,14 @@
 //  public: function prototypes
 // ------------------------------------------------------------------------- //
 
+class Buffer;
+class BufferTryReadTo;
 
-//! @brief To access all member functions working with type ::event_lf_s
+
+//! @brief To access all member functions working with type ::buffer_s
 //!
 //! @details Allows to easy access all member functions working with type
-//!          ::event_lf_s. The auto-completion function helps you to
+//!          ::buffer_s. The auto-completion function helps you to
 //!          select all suitable functions.
 //!
 class Buffer
@@ -168,6 +171,16 @@ public:
   //! @return Returns the number of bytes written
   size_t WriteBytes (const char *src, size_t sizeof_src, size_t bytes);
 
+  size_t WriteBytes (std::span<const char> src, size_t bytes);
+
+  size_t WriteBytes (std::span<const char> src);
+
+  size_t WriteBytes (std::string_view sv, size_t bytes);
+
+  size_t WriteBytes (std::string_view sv);
+
+  size_t WriteBytes (const char * src);
+
   //! @brief Writes an array to the buffer or skips it if this is not possible
   //!
   //! @details Writes an array to the buffer or skips it if this is not possible
@@ -179,6 +192,16 @@ public:
   //! @param bytes The number of bytes to be stored in the buffer.
   //! @return Returns the number of bytes written
   size_t TryWriteBytes (const char *src, size_t sizeof_src, size_t bytes);
+
+  size_t TryWriteBytes (std::span<const char> src, size_t bytes);
+
+  size_t TryWriteBytes (std::span<const char> src);
+
+  size_t TryWriteBytes (std::string_view sv, size_t bytes);
+
+  size_t TryWriteBytes (std::string_view sv);
+
+  size_t TryWriteBytes (const char * src);
 
   //! @brief Reads an array from the buffer
   //!
@@ -192,6 +215,14 @@ public:
   //! @return Returns the number of bytes read
   size_t ReadBytes (char * dest, size_t sizeof_dest, size_t bytes);
 
+  size_t ReadBytes (std::span<char> dest, size_t bytes);
+
+  size_t ReadBytes (std::span<char> dest);
+
+  size_t ReadBytes (std::string& str, size_t bytes);
+
+  size_t ReadBytes (std::string& str);
+
   //! @brief Reads an array from the buffer or skips it if this is not possible
   //!
   //! @details Reads an array from the buffer or skips it if this is not possible
@@ -203,6 +234,14 @@ public:
   //! @param bytes The number of bytes to be taken from the buffer.
   //! @return Returns the number of bytes read
   size_t TryReadBytes (char * dest, size_t sizeof_dest, size_t bytes);
+
+  size_t TryReadBytes (std::span<char> dest, size_t bytes);
+
+  size_t TryReadBytes (std::span<char> dest);
+
+  size_t TryReadBytes (std::string& str, size_t bytes);
+
+  size_t TryReadBytes (std::string& str);
 
   //! @brief Look at the buffer as if the data were being read or skips it if this is not possible
   //!
@@ -227,6 +266,14 @@ public:
   //! @param bytes The number of bytes to be taken from the buffer.
   //! @return Returns the number of bytes read
   size_t TryPeekBytes (char * dest, size_t sizeof_dest, size_t bytes);
+
+  size_t TryPeekBytes (std::span<char> dest, size_t bytes);
+
+  size_t TryPeekBytes (std::span<char> dest);
+
+  size_t TryPeekBytes (std::string& str, size_t bytes);
+
+  size_t TryPeekBytes (std::string& str);
 
 
 
@@ -287,7 +334,6 @@ public:
   //! @details Returns the currently used lines in the array.
   //! The recognized character is defined in `buffer_s::end_of_line_character`.
   //!
-  //! @param[in] object The buffer object
   //! @return Positive number of used characters
   size_t buffer_lines ();
 
@@ -306,11 +352,15 @@ public:
   //! @return Returns the number of characters written
   size_t WriteCStr (const char *src, size_t sizeof_src, size_t characters);
 
-  size_t Write(std::span<const char> src);
+  size_t WriteCStr (std::span<const char> src, size_t characters);
 
-  size_t Write(std::string_view str);
+  size_t WriteCStr (std::span<const char> src);
 
-  size_t Write(const char* src);
+  size_t WriteCStr (std::string_view sv, size_t characters);
+
+  size_t WriteCStr (std::string_view sv);
+
+  size_t WriteCStr (const char * src);
 
   //! @brief Writes a string to the buffer or skips it if this is not possible
   //!
@@ -324,6 +374,16 @@ public:
   //! @param characters The number of characters to be read from the buffer.
   //! @return Returns the number of characters written
   size_t TryWriteCStr (const char *src, size_t sizeof_src, size_t characters);
+
+  size_t TryWriteCStr (std::span<const char> src, size_t characters);
+
+  size_t TryWriteCStr (std::span<const char> src);
+
+  size_t TryWriteCStr (std::string_view sv, size_t characters);
+
+  size_t TryWriteCStr (std::string_view sv);
+
+  size_t TryWriteCStr (const char * src);
 
   //! @brief Reads a string from the buffer
   //!
@@ -339,6 +399,14 @@ public:
   //! @return Returns the number of characters read
   size_t ReadCStr (char * dest, size_t sizeof_dest, size_t characters);
 
+  size_t ReadCStr (std::span<char> dest, size_t characters);
+
+  size_t ReadCStr (std::span<char> dest);
+
+  size_t ReadCStr (std::string& str, size_t characters);
+
+  size_t ReadCStr (std::string& str);
+
   //! @brief Reads a string from the buffer or skips it if this is not possible
   //!
   //! @details Reads a string from the buffer or skips it if this is not possible.
@@ -352,6 +420,14 @@ public:
   //! @param characters The number of characters that should be read.
   //! @return Returns the number of characters read
   size_t TryReadCStr (char * dest, size_t sizeof_dest, size_t characters);
+
+  size_t TryReadCStr (std::span<char> dest, size_t characters);
+
+  size_t TryReadCStr (std::span<char> dest);
+
+  size_t TryReadCStr (std::string& str, size_t characters);
+
+  size_t TryReadCStr (std::string& str);
 
   //! @brief Look at the buffer as if the data were being read or skips it if this is not possible
   //!
@@ -377,6 +453,14 @@ public:
   //! @return Returns the number of bytes read
   size_t TryPeekCStr (char * dest, size_t sizeof_dest, size_t characters);
 
+  size_t TryPeekCStr (std::span<char> dest, size_t characters);
+
+  size_t TryPeekCStr (std::span<char> dest);
+
+  size_t TryPeekCStr (std::string& str, size_t characters);
+
+  size_t TryPeekCStr (std::string& str);
+
 
 
   //! @brief Reads a line from the buffer
@@ -389,6 +473,10 @@ public:
   //! @param sizeof_dest The length of the buffer.
   //! @return Returns the number of characters read
   size_t ReadLine (char * dest, size_t sizeof_dest);
+
+  size_t ReadLine (std::span<char> dest);
+
+  size_t ReadLine (std::string& str);
 
   //! @brief Attempts to read a complete line from the buffer.
   //!
@@ -416,6 +504,10 @@ public:
   //!              before the operation was aborted.
   ptrdiff_t TryReadLine (char * dest, size_t sizeof_dest);
 
+  ptrdiff_t TryReadLine (std::span<char> dest);
+
+  ptrdiff_t TryReadLine (std::string& str);
+
   //! @brief Reads the characters up to the given string
   //! @details Reads the characters up to the given string
   //!
@@ -429,6 +521,10 @@ public:
   //! @param to_length The length of the buffer.
   //! @return Returns the number of characters read
   size_t ReadTo (char * dest, size_t sizeof_dest, const char * to, size_t to_length);
+
+  size_t ReadTo (std::span<char> dest, std::span<char> to);
+
+  size_t ReadTo (std::string& str, std::string& to);
 
   //! @brief On each pass, it attempts to read the data and adds the characters to the string as long as the string "to" has not yet been read.
   //! @details On each pass, it attempts to read the data and adds the characters to the string as long as the string "to" has not yet been read.
@@ -445,10 +541,46 @@ public:
   //! @return Returns the number of characters read as a negative value if the 'to' string is not contained in the read string
   ptrdiff_t TryReadTo (char * dest, size_t sizeof_dest, const char * to, size_t to_length, buffer_try_read_to_t * data);
 
+  ptrdiff_t TryReadTo (std::span<char> dest, std::span<char> to, buffer_try_read_to_t * data);
+
+  ptrdiff_t TryReadTo (std::span<char> dest, std::span<char> to, BufferTryReadTo& data);
+
+  ptrdiff_t TryReadTo (std::span<char> dest, std::string_view to, buffer_try_read_to_t * data);
+
+  ptrdiff_t TryReadTo (std::span<char> dest, std::string_view to, BufferTryReadTo& data);
+
+  ptrdiff_t TryReadTo (std::string& dest, std::span<char> to, buffer_try_read_to_t * data);
+
+  ptrdiff_t TryReadTo (std::string& dest, std::span<char> to, BufferTryReadTo& data);
+
+  ptrdiff_t TryReadTo (std::string& dest, std::string_view to, buffer_try_read_to_t * data);
+
+  ptrdiff_t TryReadTo (std::string& dest, std::string_view to, BufferTryReadTo& data);
+
 
 
   //! @brief Clears the buffer
   void Clear ();
+
+
+};
+
+
+
+
+class BufferTryReadTo
+{
+
+private:
+  //! @brief The underlying C structure of the memory object
+  buffer_try_read_to_t objectData;
+
+
+public:
+  //! @brief A pointer to the `buffer_t` struct object, so it can be used with C functions
+  buffer_try_read_to_t * c_object;
+
+  BufferTryReadTo ();
 
 
 };

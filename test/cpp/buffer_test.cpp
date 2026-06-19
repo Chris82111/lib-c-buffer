@@ -67,9 +67,12 @@ static int buffer_test_basics ()
   c = b2.Get();
   if ('H' != c) { errors++; }
 
-  b2.Write("Hello");
+  b2.WriteCStr("Hello");
   b2.TryReadCStr(buf10, sizeof(buf10), SIZE_MAX);
   cout << buf10 << endl;
+
+  auto data = BufferTryReadTo();
+  b2.TryReadTo(data10, "hi", data);
 
   return errors;
 }
@@ -134,6 +137,7 @@ int buffer_test(void)
   int errors = 0;
   errors += buffer_test_basics();
   errors += buffer_test_threads();
+#warning "Tests of the methodes are missing, and it needs to be tested if all are necessary"
 
   return errors;
 }

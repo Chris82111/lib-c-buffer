@@ -26,7 +26,7 @@
 //!          whether atomic operations on objects of that size are
 //!          lock-free on the target platform.
 //!
-//!          For precise, runtime determination, use `::buffer_atomic_is_lock_free()`.
+//!          For precise, runtime determination, use `::buffer_check_lock_free_runtime()`.
 //!
 //! @param T The type to check for lock-free atomic support
 //!
@@ -1088,6 +1088,17 @@ void buffer_clear (buffer_t * object)
   {
     ;
   }
+}
+
+
+
+void buffer_try_read_to_init (buffer_try_read_to_t * object)
+{
+  if (NULL == object) { return; }
+
+  object->index = 0;
+  object->dest = NULL;
+  object->compare = NULL;
 }
 
 
